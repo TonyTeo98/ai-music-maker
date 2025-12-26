@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Music Maker - Trace Metadata (Web)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "product",
+    "environment",
+    "platform",
+    "device",
+    "agent_version",
+    "app_version",
+    "user_id_hash",
+    "audio_source"
+  ],
+  "properties": {
+    "product": {
+      "type": "string",
+      "const": "ai_music_maker"
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "dev",
+        "staging",
+        "prod"
+      ]
+    },
+    "platform": {
+      "type": "string",
+      "const": "web"
+    },
+    "device": {
+      "type": "string",
+      "enum": [
+        "mobile",
+        "desktop"
+      ]
+    },
+    "browser_family": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "agent_version": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 32
+    },
+    "app_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "experiment_bucket": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "user_id_hash": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 128
+    },
+    "audio_source": {
+      "type": "string",
+      "enum": [
+        "record",
+        "upload"
+      ]
+    },
+    "has_user_segment": {
+      "type": "boolean"
+    },
+    "style_text_len": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 500
+    },
+    "text_prompt_len": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2000
+    }
+  }
+}

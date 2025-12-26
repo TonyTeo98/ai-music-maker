@@ -1,0 +1,204 @@
+// Prisma Schema for AI Music Maker V0
+// 数据模型设计参考: 04_Architecture/TS_Architecture_Proposal.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== 设备/匿名用户 =====
+model Device {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 设备信息（可选）
+  userAgent String?
+  platform  String?  // web/mobile
+
+  tracks    Track[]
+}
+
+// ===== 作品 =====
+model Track {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // 关联
+  deviceId  String
+  device    Device      @relation(fields: [deviceId], references: [id])
+
+  // 状态: draft -> generating -> ready -> failed -> deleted
+  status    TrackStatus @default(draft)
+
+  // 元数据
+  title     String?
+  style     String?     // 音乐风格
+
+  // 主版本选择 (A/B)
+  primaryVariantId String?
+
+  // 关联
+  variants  TrackVariant[]
+  jobs      Job[]
+  shares    Share[]
+  assets    Asset[]
+
+  @@index([deviceId])
+  @@index([status])
+}
+
+enum TrackStatus {
+  draft
+  generating
+  ready
+  failed
+  deleted
+}
+
+// ===== A/B 变体 =====
+model TrackVariant {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  // 变体标识: A 或 B
+  variant   String   // "A" | "B"
+
+  // 生成结果
+  audioUrl  String?  // S3 key
+  duration  Float?   // 秒
+
+  // 评估分数
+  inputSimilarity Float?  // 与输入的相似度 0-1
+  audioQuality    Float?  // 音频质量 0-1
+
+  // Provider 信息
+  provider  String?  // suno | minimax
+  metadata  Json?    // provider 返回的原始数据
+
+  @@unique([trackId, variant])
+  @@index([trackId])
+}
+
+// ===== 异步任务 =====
+model Job {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  trackId   String
+  track     Track     @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  // 任务类型
+  type      JobType
+
+  // 状态: queued -> running -> succeeded | failed | canceled
+  status    JobStatus @default(queued)
+
+  // 进度 0-100
+  progress  Int       @default(0)
+
+  // 当前步骤
+  currentStep String?
+
+  // 错误信息
+  errorCode String?
+  errorMsg  String?
+
+  // 输入参数（gen_params）
+  params    Json?
+
+  // 输出结果
+  result    Json?
+
+  // 时间记录
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([trackId])
+  @@index([status])
+}
+
+enum JobType {
+  generate  // 音乐生成
+  video     // 视频生成（V1）
+}
+
+enum JobStatus {
+  queued
+  running
+  succeeded
+  failed
+  canceled
+}
+
+// ===== 资产 =====
+model Asset {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+
+  trackId   String?
+  track     Track?      @relation(fields: [trackId], references: [id], onDelete: SetNull)
+
+  // 类型
+  type      AssetType
+
+  // 状态
+  status    AssetStatus @default(pending)
+
+  // S3 存储
+  key       String      // S3 object key
+  bucket    String
+  mimeType  String?
+  size      Int?        // bytes
+
+  // 音频特有
+  duration  Float?      // 秒
+
+  @@index([trackId])
+  @@index([status])
+}
+
+enum AssetType {
+  input_audio   // 用户上传的原始音频
+  output_audio  // 生成的音乐
+  cover         // 封面图
+  video         // 视频
+}
+
+enum AssetStatus {
+  pending     // 等待上传
+  uploading   // 上传中
+  ready       // 可用
+  failed      // 上传失败
+}
+
+// ===== 分享 =====
+model Share {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  // 分享 token（短链接用）
+  token     String   @unique
+
+  // 访问控制
+  isPublic  Boolean  @default(true)
+  expiresAt DateTime?
+
+  // 统计
+  viewCount Int      @default(0)
+
+  @@index([token])
+  @@index([trackId])
+}

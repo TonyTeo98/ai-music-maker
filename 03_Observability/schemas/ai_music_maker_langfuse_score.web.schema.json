@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Music Maker - Langfuse Score Payload (Web)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trace_id",
+    "name",
+    "type",
+    "timestamp"
+  ],
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "observation_name": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "name": {
+      "type": "string",
+      "enum": [
+        "input_similarity_A",
+        "input_similarity_B",
+        "input_similarity",
+        "audio_quality_A",
+        "audio_quality_B",
+        "audio_quality",
+        "ab_diversity",
+        "chosen_variant",
+        "user_feedback",
+        "used_agent_recommendation",
+        "share_success",
+        "regen_within_24h"
+      ]
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "numeric",
+        "boolean",
+        "categorical"
+      ]
+    },
+    "value_numeric": {
+      "type": "number"
+    },
+    "value_bool": {
+      "type": "boolean"
+    },
+    "value_cat": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "comment": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": {
+          "const": "numeric"
+        }
+      },
+      "required": [
+        "value_numeric"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "value_bool"
+            ]
+          },
+          {
+            "required": [
+              "value_cat"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "boolean"
+        }
+      },
+      "required": [
+        "value_bool"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "value_numeric"
+            ]
+          },
+          {
+            "required": [
+              "value_cat"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "categorical"
+        }
+      },
+      "required": [
+        "value_cat"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "value_numeric"
+            ]
+          },
+          {
+            "required": [
+              "value_bool"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
