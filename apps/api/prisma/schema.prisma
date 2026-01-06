@@ -28,6 +28,7 @@ model Track {
   id        String      @id @default(cuid())
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  deletedAt DateTime?   // 软删除时间
 
   // 关联
   deviceId  String
@@ -72,6 +73,9 @@ model TrackVariant {
   // 变体标识: A 或 B
   variant   String   // "A" | "B"
 
+  // 生成批次序号 (1, 2, 3...)
+  batchIndex Int     @default(1)
+
   // 生成结果
   audioUrl  String?  // S3 key
   duration  Float?   // 秒
@@ -84,7 +88,7 @@ model TrackVariant {
   provider  String?  // suno | minimax
   metadata  Json?    // provider 返回的原始数据
 
-  @@unique([trackId, variant])
+  @@unique([trackId, variant, batchIndex])
   @@index([trackId])
 }
 

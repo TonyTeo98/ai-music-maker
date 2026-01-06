@@ -1,8 +1,15 @@
 // AI Music Maker - Media Worker
 // 处理音乐生成相关的异步任务
 
+import * as dotenv from 'dotenv'
+import * as path from 'path'
+
+// 加载根目录 .env 文件
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+
 import { Worker, Queue } from 'bullmq'
 import IORedis from 'ioredis'
+import { handleGenerateJob, GenerateJobData } from './handlers/generate'
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
 const QUEUE_NAME = 'media-jobs'
@@ -19,23 +26,19 @@ const worker = new Worker(
   QUEUE_NAME,
   async (job) => {
     console.log(`[Worker] Processing job ${job.id}, type: ${job.name}`)
-    console.log(`[Worker] Data:`, job.data)
+    console.log(`[Worker] Data:`, JSON.stringify(job.data, null, 2))
 
-    // TODO: 根据 job.name 分发到不同处理器
     switch (job.name) {
       case 'generate':
-        // await handleGenerateJob(job)
-        console.log('[Worker] Generate job - not implemented yet')
-        break
+        return await handleGenerateJob(job as any)
       default:
         console.log(`[Worker] Unknown job type: ${job.name}`)
+        return { success: false, error: 'Unknown job type' }
     }
-
-    return { success: true }
   },
   {
     connection,
-    concurrency: 2, // 同时处理 2 个任务
+    concurrency: 2,
   }
 )
 

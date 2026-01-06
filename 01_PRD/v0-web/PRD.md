@@ -105,3 +105,151 @@ V0 以“参考你的旋律/节奏”生成成品，不承诺保留原声。UI �
 - scores：input_similarity/audio_quality/ab_diversity/chosen_variant
 - 以《Agent 可观测规范（Langfuse，Web）》为准（独立工程标准文档）
 
+---
+
+## 8. 音乐生成供应商策略
+
+### 8.1 多供应商架构
+
+为降低单一供应商风险、覆盖更多场景，系统支持多供应商并存：
+
+| 供应商 | 模式 | 输入 | 状态 | 优先级 |
+|--------|------|------|------|--------|
+| Minimax | Text-to-Music | 歌词 + 风格描述 | ✅ 已确认 | 主力（文字模式） |
+| Suno | Audio-to-Music | 用户音频 + 风格 | ⬜ 待确认 | 备选（音频模式） |
+
+### 8.2 生成模式定义
+
+**模式 A：Text-to-Music（文字生成）**
+- 输入：歌词（必填）+ 风格描述（必填）
+- 输出：完整音乐
+- 供应商：Minimax
+- 适用场景：用户有明确歌词创意，无需录音
+
+**模式 B：Audio-to-Music（音频生成）**
+- 输入：用户音频（哼唱/清唱）+ 风格描述
+- 输出：基于输入旋律的完整音乐
+- 供应商：Suno（待确认）
+- 适用场景：用户有旋律想法，通过哼唱表达
+
+### 8.3 前端模式切换
+
+Create 页第一步提供模式选择：
+- **录音/上传模式**（Audio-to-Music）：现有流程
+- **纯文字模式**（Text-to-Music）：跳过录音，直接输入歌词
+
+### 8.4 供应商 API 规范
+
+#### 8.4.1 Minimax Music Generation API
+
+**基本信息**
+| 项目 | 值 |
+|------|-----|
+| Base URL | `https://api.minimaxi.com` |
+| Endpoint | `POST /v1/music_generation` |
+| Model | `music-2.0` |
+| 认证 | Bearer Token（API Key） |
+| 调用方式 | 同步（直接返回结果） |
+
+**请求参数**
+| 参数 | 必填 | 类型 | 说明 |
+|------|------|------|------|
+| `model` | ✅ | string | 固定 `music-2.0` |
+| `prompt` | ✅ | string | 音乐描述（风格/情绪/场景），10-2000 字符 |
+| `lyrics` | ✅ | string | 歌词，支持结构标签 `[Verse]` `[Chorus]` `[Bridge]` 等 |
+| `output_format` | ❌ | string | `url`（推荐）或 `hex`，默认 `hex` |
+| `audio_setting` | ❌ | object | 采样率/比特率/格式配置 |
+
+**请求示例**
+```json
+{
+  "model": "music-2.0",
+  "prompt": "独立民谣,忧郁,内省,渴望,独自漫步,咖啡馆",
+  "lyrics": "[verse]\n街灯微亮晚风轻抚\n影子拉长独自漫步\n[chorus]\n推开木门香气弥漫\n熟悉的角落陌生人看",
+  "output_format": "url",
+  "audio_setting": {
+    "sample_rate": 44100,
+    "bitrate": 256000,
+    "format": "mp3"
+  }
+}
+```
+
+**响应字段**
+| 字段 | 说明 |
+|------|------|
+| `data.audio` | 音频数据（hex 编码）或 URL |
+| `data.status` | 状态：1=生成中，2=完成 |
+| `extra_info.music_duration` | 音乐时长（毫秒） |
+| `base_resp.status_code` | 0=成功，其他为错误码 |
+
+**错误码**
+| 码 | 说明 |
+|----|------|
+| 0 | 成功 |
+| 1002 | 触发限流 |
+| 1004 | 鉴权失败 |
+| 1008 | 余额不足 |
+| 1026 | 内容敏感 |
+| 2013 | 参数异常 |
+
+**A/B 版本策略**
+Minimax 单次调用只返回一个版本，需调用两次生成 A/B：
+- 第一次调用：生成版本 A
+- 第二次调用：相同参数，生成版本 B
+- 成本：2x 单次费用
+
+**参数映射**
+| 前端参数 | Minimax 参数 | 映射方式 |
+|----------|--------------|----------|
+| `style` | `prompt` | 直接传递 |
+| `lyrics` | `lyrics` | 直接传递 |
+| `voiceType` | `prompt` | 追加到描述："女声演唱" / "男声演唱" / "纯伴奏" |
+| `excludeStyles` | `prompt` | 追加到描述："避免xxx风格" |
+| `tension` | - | 不支持 |
+| `styleLock` | - | 不支持 |
+| `segment` | - | 不适用（无音频输入） |
+
+#### 8.4.2 Suno API（待确认）
+
+**状态**：待确认供应商
+
+**需确认事项**
+- [ ] API 接入方式（官方 / 第三方代理）
+- [ ] 是否支持 Audio-to-Music
+- [ ] 请求/响应格式
+- [ ] 是否原生支持 A/B 双版本
+- [ ] 支持的参数列表
+- [ ] 计费方式
+
+**预期能力**
+| 能力 | 预期 |
+|------|------|
+| 音频输入 | ✅ 支持用户上传音频 |
+| 风格指定 | ✅ 支持 |
+| 片段选择 | ⬜ 待确认 |
+| A/B 版本 | ⬜ 待确认 |
+
+### 8.5 供应商选择逻辑
+
+```
+用户选择模式
+    ├── 文字模式 → Minimax
+    └── 音频模式 → Suno（待实现）
+                   └── 降级：提示用户使用文字模式
+```
+
+### 8.6 环境变量配置
+
+```bash
+# Minimax
+MINIMAX_API_KEY=your_api_key
+MINIMAX_API_BASE_URL=https://api.minimaxi.com
+
+# Suno（待确认）
+SUNO_API_KEY=
+SUNO_API_BASE_URL=
+```
+
+---
+

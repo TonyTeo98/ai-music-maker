@@ -10,15 +10,18 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "bullmq": "^5.31.0",
-    "@prisma/client": "^6.1.0",
+    "@aimm/shared": "workspace:*",
     "@aws-sdk/client-s3": "^3.712.0",
-    "ioredis": "^5.4.2"
+    "@prisma/client": "^6.1.0",
+    "bullmq": "^5.31.0",
+    "dotenv": "^17.2.3",
+    "ioredis": "^5.4.2",
+    "langfuse": "^3.32.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.2",
+    "prisma": "^6.1.0",
     "ts-node-dev": "^2.0.0",
-    "prisma": "^6.1.0"
+    "typescript": "^5.7.2"
   }
 }
