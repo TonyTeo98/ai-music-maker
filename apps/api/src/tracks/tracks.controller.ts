@@ -368,11 +368,21 @@ export class TracksController {
       throw new BadRequestException('Track already deleted');
     }
 
+    const now = new Date();
+    const scheduledDeleteAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30天后
+
     await this.prisma.track.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: now,
+        scheduledDeleteAt,
+      },
     });
 
-    return { success: true, message: 'Track deleted successfully' };
+    return {
+      success: true,
+      message: 'Track deleted successfully. Files will be permanently removed after 30 days.',
+      scheduledDeleteAt,
+    };
   }
 }

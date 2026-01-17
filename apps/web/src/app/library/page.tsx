@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useDeviceId } from '@/hooks/useDeviceId'
 import { listTracks } from '@/lib/api'
+import { CoverImage } from '@/components/CoverImage'
 
 interface Track {
   id: string
@@ -11,6 +12,8 @@ interface Track {
   style?: string
   primaryVariantId?: string
   audioUrl?: string
+  imageUrl?: string
+  imageLargeUrl?: string
   duration?: number
   createdAt: string
 }
@@ -152,36 +155,54 @@ export default function LibraryPage() {
             </a>
           </div>
         ) : (
-          <div className="space-y-3 md:space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {tracks.map((track) => (
               <a
                 key={track.id}
                 href={`/tracks/${track.id}`}
-                className="bg-white rounded-xl shadow-sm border p-3 md:p-4 flex items-center gap-3 md:gap-4 hover:border-primary-300 transition-colors block"
+                className="group bg-neutral-800 rounded-xl overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all block"
               >
-                {/* Play Button */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handlePlay(track.id, track.audioUrl)
-                  }}
-                  disabled={!track.audioUrl}
-                  className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-full flex items-center justify-center transition-colors ${
-                    track.audioUrl
-                      ? 'bg-primary-100 text-primary-600 hover:bg-primary-200'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  {playingId === track.id ? (
-                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
+                {/* Cover Image with Play Overlay */}
+                <div className="relative aspect-square">
+                  <CoverImage
+                    imageUrl={track.imageUrl}
+                    imageLargeUrl={track.imageLargeUrl}
+                    alt={track.title || '未命名作品'}
+                    size="large"
+                    className="w-full h-full rounded-none"
+                  />
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handlePlay(track.id, track.audioUrl)
+                      }}
+                      disabled={!track.audioUrl}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
+                        track.audioUrl
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                      }`}
+                    >
+                      {playingId === track.id ? (
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {/* Status Badge */}
+                  {track.status === 'generating' && (
+                    <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500/90 text-white text-xs rounded-full">
+                      生成中...
+                    </div>
                   )}
-                </button>
+                </div>
 
                 {/* Hidden Audio Element */}
                 {track.audioUrl && (
@@ -193,32 +214,17 @@ export default function LibraryPage() {
                 )}
 
                 {/* Track Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium truncate text-sm md:text-base">
+                <div className="p-3">
+                  <h3 className="font-medium truncate text-sm text-white">
                     {track.title || '未命名作品'}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-gray-500 mt-1">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
                     {track.style && (
-                      <span className="px-2 py-0.5 bg-gray-100 rounded text-xs">
-                        {track.style}
-                      </span>
+                      <span className="truncate">{track.style}</span>
                     )}
-                    <span className="hidden sm:inline">{formatDuration(track.duration)}</span>
+                    {track.style && <span>·</span>}
                     <span>{formatDate(track.createdAt)}</span>
-                    {track.status === 'generating' && (
-                      <span className="text-yellow-600">生成中...</span>
-                    )}
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                  {/* View Detail */}
-                  <span className="p-2 text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
                 </div>
               </a>
             ))}

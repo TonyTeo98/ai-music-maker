@@ -29,6 +29,7 @@ model Track {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   deletedAt DateTime?   // 软删除时间
+  scheduledDeleteAt DateTime? // 计划物理删除时间（deletedAt + 30天）
 
   // 关联
   deviceId  String
@@ -77,8 +78,21 @@ model TrackVariant {
   batchIndex Int     @default(1)
 
   // 生成结果
-  audioUrl  String?  // S3 key
+  audioUrl  String?  // Suno CDN URL (sourceUrl)
   duration  Float?   // 秒
+
+  // 封面图 URL
+  imageUrl String? // Suno CDN 标准封面图 URL
+  imageLargeUrl String? // Suno CDN 大尺寸封面图 URL
+
+  // R2 下载状态
+  localAudioKey String? // R2 存储的音频 key
+  localImageKey String? // R2 存储的标准封面图 key
+  localImageLargeKey String? // R2 存储的大尺寸封面图 key
+  downloadStatus String? @default("pending") // pending | downloading | completed | failed
+  imageDownloadStatus String? @default("pending") // pending | downloading | completed | failed
+  downloadError String? // 下载失败原因
+  downloadedAt DateTime? // 下载完成时间
 
   // 评估分数
   inputSimilarity Float?  // 与输入的相似度 0-1

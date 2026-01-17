@@ -20,6 +20,8 @@ export interface GenerateResult {
   variants?: {
     variant: 'A' | 'B'
     audioUrl: string
+    imageUrl: string
+    imageLargeUrl: string
     duration: number
   }[]
   error?: string

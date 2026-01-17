@@ -96,6 +96,8 @@ interface JobResponse {
     variant: string
     audioUrl?: string | null
     duration?: number | null
+    imageUrl?: string | null
+    imageLargeUrl?: string | null
   }[]
   createdAt: string
   startedAt?: string
@@ -175,6 +177,8 @@ interface ShareDetail {
     variant: string
     audioUrl?: string
     duration?: number
+    imageUrl?: string | null
+    imageLargeUrl?: string | null
   } | null
   viewCount: number
   createdAt: string
@@ -203,6 +207,8 @@ interface TrackListItem {
   primaryVariantId?: string
   audioUrl?: string
   duration?: number
+  imageUrl?: string | null
+  imageLargeUrl?: string | null
   createdAt: string
 }
 
@@ -233,6 +239,8 @@ export interface HistoryVariant {
   variant: string
   audioUrl?: string | null
   duration?: number | null
+  imageUrl?: string | null
+  imageLargeUrl?: string | null
   isPrimary: boolean
 }
 

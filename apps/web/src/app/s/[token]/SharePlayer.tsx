@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { CoverImage } from '@/components/CoverImage'
 
 interface SharePlayerProps {
   audioUrl: string
   duration: number
+  imageUrl?: string | null
+  imageLargeUrl?: string | null
 }
 
-export function SharePlayer({ audioUrl, duration }: SharePlayerProps) {
+export function SharePlayer({ audioUrl, duration, imageUrl, imageLargeUrl }: SharePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -70,43 +73,74 @@ export function SharePlayer({ audioUrl, duration }: SharePlayerProps) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <div className="space-y-4">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Background with blur effect */}
+      <div className="absolute inset-0 -z-10">
+        {imageUrl || imageLargeUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center blur-3xl opacity-40"
+              style={{
+                backgroundImage: `url(${imageLargeUrl || imageUrl})`,
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black" />
+        )}
+      </div>
+
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
-      {/* Large play button */}
-      <div className="flex justify-center">
+      {/* Content area */}
+      <div className="relative z-10 flex flex-col items-center space-y-8 px-4 py-12">
+        {/* Large cover image */}
+        <div className="relative">
+          <CoverImage
+            imageUrl={imageUrl}
+            imageLargeUrl={imageLargeUrl}
+            alt="Track cover"
+            size="large"
+            className="w-80 h-80 md:w-80 md:h-80 sm:w-64 sm:h-64 shadow-2xl"
+          />
+        </div>
+
+        {/* Large play button */}
         <button
           onClick={toggle}
           disabled={!isLoaded}
-          className="w-20 h-20 flex items-center justify-center rounded-full bg-primary-500 text-white hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          className="w-24 h-24 md:w-24 md:h-24 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-primary-500 text-white hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:scale-105"
         >
           {isPlaying ? (
-            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-10 h-10 md:w-10 md:h-10 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 24 24">
               <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
             </svg>
           ) : (
-            <svg className="w-8 h-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-10 h-10 md:w-10 md:h-10 sm:w-8 sm:h-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
             </svg>
           )}
         </button>
-      </div>
 
-      {/* Progress bar */}
-      <div
-        className="h-2 bg-gray-200 rounded-full overflow-hidden cursor-pointer"
-        onClick={handleSeek}
-      >
-        <div
-          className="h-full bg-primary-500 transition-all duration-100"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+        {/* Progress bar */}
+        <div className="w-full max-w-md space-y-2">
+          <div
+            className="h-2 bg-white/20 rounded-full overflow-hidden cursor-pointer backdrop-blur-sm"
+            onClick={handleSeek}
+          >
+            <div
+              className="h-full bg-primary-500 transition-all duration-100"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
 
-      {/* Time display */}
-      <div className="flex justify-between text-sm text-gray-500">
-        <span>{formatTime(currentTime)}</span>
-        <span>{formatTime(duration)}</span>
+          {/* Time display */}
+          <div className="flex justify-between text-sm text-white/80">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
+        </div>
       </div>
     </div>
   )

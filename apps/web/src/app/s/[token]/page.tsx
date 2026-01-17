@@ -18,6 +18,8 @@ interface ShareDetail {
     variant: string
     audioUrl?: string
     duration?: number
+    imageUrl?: string
+    imageLargeUrl?: string
   } | null
   viewCount: number
   createdAt: string
@@ -95,6 +97,8 @@ export default async function SharePage({
               <SharePlayer
                 audioUrl={share.variant.audioUrl}
                 duration={share.variant.duration || 0}
+                imageUrl={share.variant.imageUrl}
+                imageLargeUrl={share.variant.imageLargeUrl}
               />
             ) : (
               <div className="text-center py-8 text-gray-500">

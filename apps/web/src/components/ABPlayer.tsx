@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { CoverImage } from './CoverImage'
 
 interface Variant {
   id: string
   variant: string
   audioUrl?: string | null
   duration?: number | null
+  imageUrl?: string | null
+  imageLargeUrl?: string | null
 }
 
 interface ABPlayerProps {
@@ -84,8 +87,41 @@ export function ABPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const primaryVariant = variants.find((v) => v.id === primaryVariantId)
+
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Immersive Background - Desktop Only */}
+      {primaryVariant && (primaryVariant.imageUrl || primaryVariant.imageLargeUrl) && (
+        <div className="hidden md:block relative overflow-hidden rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-800 shadow-2xl mb-6">
+          {/* Blurred Background */}
+          <div className="absolute inset-0">
+            <CoverImage
+              imageUrl={primaryVariant.imageUrl}
+              imageLargeUrl={primaryVariant.imageLargeUrl}
+              alt="背景"
+              size="large"
+              className="w-full h-full blur-3xl opacity-60 scale-110"
+            />
+          </div>
+
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+
+          {/* Content */}
+          <div className="relative flex items-center justify-center py-12 px-8">
+            <CoverImage
+              imageUrl={primaryVariant.imageUrl}
+              imageLargeUrl={primaryVariant.imageLargeUrl}
+              alt="主版本封面"
+              size="large"
+              className="shadow-2xl ring-2 ring-white/20"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Variant Cards */}
       {variants.map((v, index) => {
         const isPlaying = playingId === v.id
         const isPrimary = primaryVariantId === v.id
@@ -117,6 +153,17 @@ export function ABPlayer({
             <div className="p-5">
               {/* Header */}
               <div className="flex items-center gap-4 mb-4">
+                {/* Cover Image - Small */}
+                {(v.imageUrl || v.imageLargeUrl) && (
+                  <CoverImage
+                    imageUrl={v.imageUrl}
+                    imageLargeUrl={v.imageLargeUrl}
+                    alt={`版本 ${v.variant} 封面`}
+                    size="small"
+                    className="shadow-md"
+                  />
+                )}
+
                 {/* Play Button */}
                 <button
                   onClick={() => toggle(v.id)}

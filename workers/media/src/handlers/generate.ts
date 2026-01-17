@@ -5,8 +5,14 @@ import { PrismaClient } from '@prisma/client'
 import { cqtaiProvider } from '../providers'
 import { WORKER_STEPS } from '@aimm/shared'
 import { langfuseService } from '../services/langfuse'
+import { QueueService } from '../../../apps/api/src/queue/queue.service'
+import { ConfigService } from '@nestjs/config'
 
 const prisma = new PrismaClient()
+
+// 创建 QueueService 实例用于触发下载任务
+const configService = new ConfigService()
+const queueService = new QueueService(configService)
 
 export interface GenerateJobData {
   trackId: string
@@ -237,16 +243,37 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     // 保存变体到数据库
     if (result.variants) {
       for (const variant of result.variants) {
-        await prisma.trackVariant.create({
+        const createdVariant = await prisma.trackVariant.create({
           data: {
             trackId,
             variant: variant.variant,
             batchIndex: newBatchIndex,
             audioUrl: variant.audioUrl,
+            imageUrl: variant.imageUrl, // 新增
+            imageLargeUrl: variant.imageLargeUrl, // 新增
             duration: variant.duration,
             provider: 'cqtai',
+            downloadStatus: 'pending', // 新增：初始状态
+            imageDownloadStatus: 'pending', // 新增
           },
         })
+
+        // 【新增】触发下载任务（非阻塞）
+        try {
+          await queueService.addDownloadJob({
+            variantId: createdVariant.id,
+            sourceUrl: variant.audioUrl,
+            trackId,
+            variant: variant.variant as 'A' | 'B',
+            batchIndex: newBatchIndex,
+            imageUrl: variant.imageUrl, // 新增
+            imageLargeUrl: variant.imageLargeUrl, // 新增
+          })
+          console.log(`[GenerateHandler] Download job queued for variant ${createdVariant.id}`)
+        } catch (error) {
+          console.error(`[GenerateHandler] Failed to queue download job:`, error)
+          // 不阻塞生成流程，继续执行
+        }
       }
     }
 

@@ -23,6 +23,16 @@ export interface GenerateJobData {
   styleLock?: number;
 }
 
+export interface DownloadJobData {
+  variantId: string;
+  sourceUrl: string;
+  trackId: string;
+  variant: 'A' | 'B';
+  batchIndex: number;
+  imageUrl?: string;
+  imageLargeUrl?: string;
+}
+
 @Injectable()
 export class QueueService implements OnModuleDestroy {
   private readonly queue: Queue;
@@ -45,6 +55,19 @@ export class QueueService implements OnModuleDestroy {
         type: 'exponential',
         delay: 5000,
       },
+    });
+    return job.id || '';
+  }
+
+  async addDownloadJob(data: DownloadJobData): Promise<string> {
+    const job = await this.queue.add('download', data, {
+      attempts: 5, // 最多重试 5 次
+      backoff: {
+        type: 'exponential',
+        delay: 10000, // 首次重试 10s
+      },
+      removeOnComplete: 100,
+      removeOnFail: 500,
     });
     return job.id || '';
   }

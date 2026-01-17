@@ -128,6 +128,8 @@ export class CQTAIProvider implements MusicProvider {
       result.variants = data.result.slice(0, 2).map((item, index) => ({
         variant: index === 0 ? 'A' : 'B',
         audioUrl: item.audio_url,
+        imageUrl: item.image_url,
+        imageLargeUrl: item.image_large_url,
         duration: item.metadata?.duration || item.duration || 0,
       }))
     }
@@ -160,11 +162,15 @@ export class CQTAIProvider implements MusicProvider {
         {
           variant: 'A',
           audioUrl: 'https://example.com/mock-audio-a.mp3',
+          imageUrl: 'https://example.com/mock-image-a.jpg',
+          imageLargeUrl: 'https://example.com/mock-image-large-a.jpg',
           duration: 180,
         },
         {
           variant: 'B',
           audioUrl: 'https://example.com/mock-audio-b.mp3',
+          imageUrl: 'https://example.com/mock-image-b.jpg',
+          imageLargeUrl: 'https://example.com/mock-image-large-b.jpg',
           duration: 175,
         },
       ],
