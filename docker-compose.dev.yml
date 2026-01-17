@@ -1,0 +1,51 @@
+# AI Music Maker - 开发环境配置
+# 使用方式: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# 特性: 源代码挂载 + 热重载
+
+services:
+  api:
+    build:
+      context: .
+      target: base  # 使用 base stage，包含所有依赖
+    command: sh -c "cd apps/api && pnpm dev"
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/apps/api/node_modules
+      - /app/packages/shared/node_modules
+    environment:
+      NODE_ENV: "development"
+
+  worker:
+    build:
+      context: .
+      target: base
+    command: sh -c "cd workers/media && pnpm dev"
+    volumes:
+      - ./workers/media:/app/workers/media
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/workers/media/node_modules
+      - /app/packages/shared/node_modules
+    environment:
+      NODE_ENV: "development"
+
+  web:
+    build:
+      context: .
+      target: base
+    command: sh -c "cd apps/web && pnpm dev"
+    volumes:
+      - ./apps/web:/app/apps/web
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+    environment:
+      NODE_ENV: "development"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
