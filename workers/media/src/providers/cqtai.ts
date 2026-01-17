@@ -108,7 +108,7 @@ export class CQTAIProvider implements MusicProvider {
 
     // 状态映射
     let status: GenerateResult['status']
-    if (data.status === 'complete') {
+    if (data.status === 'complete' || data.status === 'succeeded') {
       status = 'completed'
     } else if (data.status === 'failed') {
       status = 'failed'
@@ -124,7 +124,7 @@ export class CQTAIProvider implements MusicProvider {
     }
 
     // 解析变体
-    if (data.status === 'complete' && data.result && data.result.length > 0) {
+    if ((data.status === 'complete' || data.status === 'succeeded') && data.result && data.result.length > 0) {
       result.variants = data.result.slice(0, 2).map((item, index) => ({
         variant: index === 0 ? 'A' : 'B',
         audioUrl: item.audio_url,
