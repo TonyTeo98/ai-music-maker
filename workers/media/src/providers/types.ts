@@ -7,6 +7,11 @@ export interface GenerateRequest {
     startMs: number
     endMs: number
   }
+  // 扩展参数
+  lyrics?: string
+  title?: string
+  voiceType?: 'm' | 'f'
+  excludeStyles?: string[]
 }
 
 export interface GenerateResult {

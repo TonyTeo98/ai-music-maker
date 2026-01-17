@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { AudioInput } from '@/components/AudioInput'
 import { ABPlayer } from '@/components/ABPlayer'
 import { AdvancedSettings, defaultAdvancedSettings, type AdvancedSettingsData } from '@/components/AdvancedSettings'
+import LyricsGeneratorDialog from '@/components/LyricsGeneratorDialog'
 import { createTrack, startGenerate, getJob, setPrimaryVariant, createShare, type GenerateOptions } from '@/lib/api'
 import { getDeviceId } from '@/hooks/useDeviceId'
 
@@ -53,6 +54,7 @@ export default function CreatePage() {
   const [error, setError] = useState<string | null>(null)
   const [showSelectModal, setShowSelectModal] = useState(false)
   const [skipSegment, setSkipSegment] = useState(false)
+  const [showLyricsDialog, setShowLyricsDialog] = useState(false)
 
   const handleUploadComplete = (id: string, url?: string) => {
     setAssetId(id)
@@ -384,9 +386,25 @@ export default function CreatePage() {
 
             {/* 歌词/主题（可选） */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                歌词/主题 <span className="text-gray-400 font-normal">（可选）</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  歌词/主题 <span className="text-gray-400 font-normal">（可选）</span>
+                </label>
+                <button
+                  onClick={() => setShowLyricsDialog(true)}
+                  className="flex items-center gap-1 px-3 py-1 text-sm text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                    />
+                  </svg>
+                  AI 生成
+                </button>
+              </div>
               <textarea
                 value={lyrics}
                 onChange={(e) => setLyrics(e.target.value)}
@@ -584,6 +602,13 @@ export default function CreatePage() {
           </div>
         </div>
       )}
+
+      {/* 歌词生成对话框 */}
+      <LyricsGeneratorDialog
+        isOpen={showLyricsDialog}
+        onClose={() => setShowLyricsDialog(false)}
+        onGenerate={(generatedLyrics) => setLyrics(generatedLyrics)}
+      />
     </main>
   )
 }

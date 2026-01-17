@@ -2,7 +2,7 @@
 
 import { Job } from 'bullmq'
 import { PrismaClient } from '@prisma/client'
-import { sunoProvider } from '../providers'
+import { cqtaiProvider } from '../providers'
 import { WORKER_STEPS } from '@aimm/shared'
 import { langfuseService } from '../services/langfuse'
 
@@ -17,6 +17,10 @@ export interface GenerateJobData {
     startMs: number
     endMs: number
   }
+  // 扩展参数
+  lyrics?: string
+  voiceType?: 'female' | 'male' | 'instrumental'
+  excludeStyles?: string[]
 }
 
 interface StepTiming {
@@ -89,7 +93,7 @@ function reportMockScores(traceId: string) {
 }
 
 export async function handleGenerateJob(job: Job<GenerateJobData>) {
-  const { trackId, jobId, style, inputAssetKey, segment } = job.data
+  const { trackId, jobId, style, inputAssetKey, segment, lyrics, voiceType, excludeStyles } = job.data
   const traceId = jobId // 使用 jobId 作为 trace_id
 
   console.log(`[GenerateHandler] Starting job ${jobId} for track ${trackId}`)
@@ -148,12 +152,24 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     const s3Bucket = process.env.S3_BUCKET || 'aimm-assets'
     const audioUrl = `${s3Endpoint}/${s3Bucket}/${inputAssetKey}`
 
+    // 获取 Track 信息用于 title
+    const track = await prisma.track.findUnique({ where: { id: trackId } })
+
+    // 映射 voiceType: female/male/instrumental -> f/m
+    let mappedVoiceType: 'm' | 'f' | undefined
+    if (voiceType === 'female') {
+      mappedVoiceType = 'f'
+    } else if (voiceType === 'male') {
+      mappedVoiceType = 'm'
+    }
+    // instrumental 不传 vocalGender
+
     stepTimings.push({
       name: WORKER_STEPS.COMPOSE_PARAMS,
       startTime: currentStepStart,
       endTime: new Date(),
-      input: { style, segment },
-      output: { audioUrl },
+      input: { style, segment, lyrics, voiceType },
+      output: { audioUrl, mappedVoiceType },
     })
 
     // Step 3: Submit to Provider
@@ -161,10 +177,14 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     await updateJobProgress(jobId, 30, WORKER_STEPS.MUSIC_GENERATE)
     console.log(`[GenerateHandler] Step: ${WORKER_STEPS.MUSIC_GENERATE}`)
 
-    const { taskId } = await sunoProvider.submitGenerate({
+    const { taskId } = await cqtaiProvider.submitGenerate({
       audioUrl,
       style,
       segment,
+      lyrics,
+      title: track?.title || undefined,
+      voiceType: mappedVoiceType,
+      excludeStyles,
     })
 
     console.log(`[GenerateHandler] Provider task submitted: ${taskId}`)
@@ -172,7 +192,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     // Step 4: Poll for completion
     let attempts = 0
     const maxAttempts = 60 // 最多轮询 60 次（约 5 分钟）
-    let result = await sunoProvider.queryTask(taskId)
+    let result = await cqtaiProvider.queryTask(taskId)
 
     while (result.status !== 'completed' && result.status !== 'failed') {
       attempts++
@@ -186,7 +206,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
 
       // 等待 5 秒后重试
       await new Promise((resolve) => setTimeout(resolve, 5000))
-      result = await sunoProvider.queryTask(taskId)
+      result = await cqtaiProvider.queryTask(taskId)
     }
 
     if (result.status === 'failed') {
@@ -197,7 +217,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       name: WORKER_STEPS.MUSIC_GENERATE,
       startTime: currentStepStart,
       endTime: new Date(),
-      input: { taskId, provider: 'suno' },
+      input: { taskId, provider: 'cqtai' },
       output: {
         status: result.status,
         variantCount: result.variants?.length || 0,
@@ -219,7 +239,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
             batchIndex: newBatchIndex,
             audioUrl: variant.audioUrl,
             duration: variant.duration,
-            provider: 'suno',
+            provider: 'cqtai',
           },
         })
       }

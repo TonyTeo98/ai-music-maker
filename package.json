@@ -10,9 +10,16 @@
     "clean": "turbo clean && rm -rf node_modules",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:logs": "docker-compose logs -f",
+    "test:provider": "tsx scripts/test-provider.ts",
+    "test:e2e": "tsx scripts/test-e2e.ts",
+    "test:lyrics": "tsx scripts/test-lyrics.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
+    "dotenv": "^17.2.3",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   },
