@@ -16,6 +16,8 @@ interface SunoTaskResponse {
   status: 'pending' | 'processing' | 'complete' | 'failed'
   audio_url?: string
   audio_url_b?: string
+  image_url?: string
+  image_large_url?: string
   duration?: number
   error?: string
 }
@@ -80,6 +82,8 @@ export class SunoProvider implements MusicProvider {
         {
           variant: 'A',
           audioUrl: response.audio_url,
+          imageUrl: response.image_url || '',
+          imageLargeUrl: response.image_large_url || '',
           duration: response.duration || 0,
         },
       ]
@@ -87,6 +91,8 @@ export class SunoProvider implements MusicProvider {
         result.variants.push({
           variant: 'B',
           audioUrl: response.audio_url_b,
+          imageUrl: response.image_url || '',
+          imageLargeUrl: response.image_large_url || '',
           duration: response.duration || 0,
         })
       }
@@ -120,11 +126,15 @@ export class SunoProvider implements MusicProvider {
         {
           variant: 'A',
           audioUrl: 'https://example.com/mock-audio-a.mp3',
+          imageUrl: 'https://example.com/mock-image-a.jpg',
+          imageLargeUrl: 'https://example.com/mock-image-large-a.jpg',
           duration: 180,
         },
         {
           variant: 'B',
           audioUrl: 'https://example.com/mock-audio-b.mp3',
+          imageUrl: 'https://example.com/mock-image-b.jpg',
+          imageLargeUrl: 'https://example.com/mock-image-large-b.jpg',
           duration: 175,
         },
       ],

@@ -1,10 +1,61 @@
 import { PrismaClient } from '@prisma/client';
-import { StorageService } from '../../../../apps/api/src/storage/storage.service';
-import { ConfigService } from '@nestjs/config';
+import { S3Client, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 
 const prisma = new PrismaClient();
-const configService = new ConfigService();
-const storageService = new StorageService(configService);
+
+// 创建 S3 客户端
+const s3Client = new S3Client({
+  region: process.env.S3_REGION || 'auto',
+  endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || 'minioadmin',
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'minioadmin123',
+  },
+  forcePathStyle: true,
+});
+
+const S3_BUCKET = process.env.S3_BUCKET || 'aimm-assets';
+
+/**
+ * 批量删除 S3 对象
+ */
+async function deleteObjects(keys: string[]): Promise<{
+  deleted: string[];
+  errors: Array<{ key: string; message: string }>;
+}> {
+  if (keys.length === 0) {
+    return { deleted: [], errors: [] };
+  }
+
+  try {
+    const command = new DeleteObjectsCommand({
+      Bucket: S3_BUCKET,
+      Delete: {
+        Objects: keys.map(key => ({ Key: key })),
+        Quiet: false,
+      },
+    });
+
+    const response = await s3Client.send(command);
+
+    const deleted = (response.Deleted || []).map(obj => obj.Key!);
+    const errors = (response.Errors || []).map(err => ({
+      key: err.Key!,
+      message: err.Message || 'Unknown error',
+    }));
+
+    return { deleted, errors };
+  } catch (error) {
+    console.error('[deleteObjects] Failed to delete objects:', error);
+    return {
+      deleted: [],
+      errors: keys.map(key => ({
+        key,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })),
+    };
+  }
+}
 
 export async function handleCleanupJob() {
   console.log('[CleanupHandler] Starting cleanup task');
@@ -52,7 +103,7 @@ export async function handleCleanupJob() {
 
       // 3. 删除 R2 文件
       if (keysToDelete.length > 0) {
-        const { deleted, errors } = await storageService.deleteObjects(keysToDelete);
+        const { deleted, errors } = await deleteObjects(keysToDelete);
         console.log(`[CleanupHandler] Track ${track.id}: deleted ${deleted.length}/${keysToDelete.length} files`);
 
         if (errors.length > 0) {

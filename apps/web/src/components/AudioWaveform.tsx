@@ -113,7 +113,10 @@ export function AudioWaveform({
     ws.load(audioUrl)
 
     return () => {
-      ws.destroy()
+      if (ws) {
+        ws.pause()
+        ws.destroy()
+      }
     }
   }, [audioUrl, minDuration, maxDuration])
 

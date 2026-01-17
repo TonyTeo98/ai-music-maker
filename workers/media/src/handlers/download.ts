@@ -1,13 +1,71 @@
 import { Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
-import { StorageService } from '../../../../apps/api/src/storage/storage.service';
-import { ConfigService } from '@nestjs/config';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const prisma = new PrismaClient();
 
-// 创建 StorageService 实例
-const configService = new ConfigService();
-const storageService = new StorageService(configService);
+// 创建 S3 客户端
+const s3Client = new S3Client({
+  region: process.env.S3_REGION || 'auto',
+  endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || 'minioadmin',
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'minioadmin123',
+  },
+  forcePathStyle: true,
+});
+
+const S3_BUCKET = process.env.S3_BUCKET || 'aimm-assets';
+
+/**
+ * 从 URL 下载文件并上传到 S3
+ */
+async function uploadFromUrl(
+  url: string,
+  key: string,
+  options?: {
+    contentType?: string;
+    timeout?: number;
+  }
+): Promise<{ size: number }> {
+  const timeout = options?.timeout || 60000;
+  const contentType = options?.contentType || 'application/octet-stream';
+
+  // 使用 AbortController 实现超时
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    // 下载文件
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+    }
+
+    // 获取文件内容
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 上传到 S3
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      })
+    );
+
+    return { size: buffer.length };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Upload from URL timed out after ${timeout}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export interface DownloadJobData {
   variantId: string;      // TrackVariant ID
@@ -41,7 +99,7 @@ export async function handleDownloadJob(job: Job<DownloadJobData>) {
     const imageLargeKey = `tracks/${trackId}/batch${batchIndex}_${variant}_${timestamp}_large.jpg`;
 
     // 3. 下载音频
-    const { size: audioSize } = await storageService.uploadFromUrl(sourceUrl, audioKey, {
+    const { size: audioSize } = await uploadFromUrl(sourceUrl, audioKey, {
       contentType: 'audio/mpeg',
       timeout: 120000, // 2分钟超时
     });
@@ -50,7 +108,7 @@ export async function handleDownloadJob(job: Job<DownloadJobData>) {
     let imageDownloaded = false;
     if (imageUrl) {
       try {
-        await storageService.uploadFromUrl(imageUrl, imageKey, {
+        await uploadFromUrl(imageUrl, imageKey, {
           contentType: 'image/jpeg',
           timeout: 60000, // 1分钟超时
         });
@@ -65,7 +123,7 @@ export async function handleDownloadJob(job: Job<DownloadJobData>) {
     let imageLargeDownloaded = false;
     if (imageLargeUrl) {
       try {
-        await storageService.uploadFromUrl(imageLargeUrl, imageLargeKey, {
+        await uploadFromUrl(imageLargeUrl, imageLargeKey, {
           contentType: 'image/jpeg',
           timeout: 60000,
         });

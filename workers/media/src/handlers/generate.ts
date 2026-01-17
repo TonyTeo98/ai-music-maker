@@ -1,18 +1,20 @@
 // 音乐生成任务处理器
 
-import { Job } from 'bullmq'
+import { Job, Queue } from 'bullmq'
 import { PrismaClient } from '@prisma/client'
+import IORedis from 'ioredis'
 import { cqtaiProvider } from '../providers'
 import { WORKER_STEPS } from '@aimm/shared'
 import { langfuseService } from '../services/langfuse'
-import { QueueService } from '../../../apps/api/src/queue/queue.service'
-import { ConfigService } from '@nestjs/config'
 
 const prisma = new PrismaClient()
 
-// 创建 QueueService 实例用于触发下载任务
-const configService = new ConfigService()
-const queueService = new QueueService(configService)
+// 创建 Redis 连接和队列实例用于触发下载任务
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
+const connection = new IORedis(REDIS_URL, {
+  maxRetriesPerRequest: null,
+})
+const mediaQueue = new Queue('media-jobs', { connection })
 
 export interface GenerateJobData {
   trackId: string
@@ -260,7 +262,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
 
         // 【新增】触发下载任务（非阻塞）
         try {
-          await queueService.addDownloadJob({
+          await mediaQueue.add('download', {
             variantId: createdVariant.id,
             sourceUrl: variant.audioUrl,
             trackId,
@@ -268,6 +270,14 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
             batchIndex: newBatchIndex,
             imageUrl: variant.imageUrl, // 新增
             imageLargeUrl: variant.imageLargeUrl, // 新增
+          }, {
+            attempts: 5,
+            backoff: {
+              type: 'exponential',
+              delay: 10000,
+            },
+            removeOnComplete: 100,
+            removeOnFail: 500,
           })
           console.log(`[GenerateHandler] Download job queued for variant ${createdVariant.id}`)
         } catch (error) {

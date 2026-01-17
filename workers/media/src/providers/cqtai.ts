@@ -26,6 +26,8 @@ interface CQTAITaskResponse {
       title: string
       status: string
       audio_url: string
+      image_url?: string
+      image_large_url?: string
       duration: number
       metadata: {
         duration: number
@@ -128,8 +130,8 @@ export class CQTAIProvider implements MusicProvider {
       result.variants = data.result.slice(0, 2).map((item, index) => ({
         variant: index === 0 ? 'A' : 'B',
         audioUrl: item.audio_url,
-        imageUrl: item.image_url,
-        imageLargeUrl: item.image_large_url,
+        imageUrl: item.image_url || '',
+        imageLargeUrl: item.image_large_url || '',
         duration: item.metadata?.duration || item.duration || 0,
       }))
     }
