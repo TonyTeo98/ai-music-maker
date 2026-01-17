@@ -4,18 +4,18 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const prisma = new PrismaClient();
 
-// 创建 S3 客户端
+// 创建 S3 客户端（兼容 Cloudflare R2）
 const s3Client = new S3Client({
   region: process.env.S3_REGION || 'auto',
-  endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
+  endpoint: process.env.S3_ENDPOINT,
   credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID || 'minioadmin',
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'minioadmin123',
+    accessKeyId: process.env.S3_ACCESS_KEY!,
+    secretAccessKey: process.env.S3_SECRET_KEY!,
   },
   forcePathStyle: true,
 });
 
-const S3_BUCKET = process.env.S3_BUCKET || 'aimm-assets';
+const S3_BUCKET = process.env.S3_BUCKET!;
 
 /**
  * 从 URL 下载文件并上传到 S3
