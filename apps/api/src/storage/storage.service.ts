@@ -7,9 +7,11 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 export class StorageService {
   private readonly s3Client: S3Client;
   private readonly bucket: string;
+  private readonly publicUrl: string | null;
 
   constructor(private configService: ConfigService) {
     this.bucket = this.configService.get<string>('S3_BUCKET', 'aimm-assets');
+    this.publicUrl = this.configService.get<string>('R2_PUBLIC_URL', '') || null;
 
     this.s3Client = new S3Client({
       endpoint: this.configService.get<string>('S3_ENDPOINT'),
@@ -43,6 +45,18 @@ export class StorageService {
     });
 
     return getSignedUrl(this.s3Client, command, { expiresIn });
+  }
+
+  /**
+   * 获取公开访问 URL
+   * - 生产环境（R2 + 自定义域名）：返回公开 URL
+   * - 开发环境（MinIO）：返回签名 URL
+   */
+  async getPublicUrl(key: string): Promise<string> {
+    if (this.publicUrl) {
+      return `${this.publicUrl}/${key}`;
+    }
+    return this.getPresignedDownloadUrl(key);
   }
 
   generateKey(trackId: string | null, filename: string): string {

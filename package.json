@@ -13,7 +13,9 @@
     "docker:logs": "docker-compose logs -f",
     "test:provider": "tsx scripts/test-provider.ts",
     "test:e2e": "tsx scripts/test-e2e.ts",
-    "test:lyrics": "tsx scripts/test-lyrics.ts"
+    "test:lyrics": "tsx scripts/test-lyrics.ts",
+    "test:r2": "tsx scripts/test-r2.ts",
+    "test:frontend": "tsx scripts/test-frontend-flow.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

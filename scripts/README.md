@@ -17,7 +17,28 @@ pnpm test:provider
 
 ---
 
-### 2. 端到端测试（需要真实环境）
+### 2. R2 配置测试（验证存储配置）
+
+测试 Cloudflare R2 或 MinIO 配置是否正确：
+
+```bash
+pnpm test:r2
+```
+
+**测试内容**：
+- ✅ 环境变量检查
+- ✅ S3 连接测试
+- ✅ 文件上传测试
+- ✅ 文件下载测试
+- ✅ 公开 URL 访问测试（如果配置了 R2_PUBLIC_URL）
+
+**前置条件**：
+- 开发环境：启动 MinIO（`pnpm docker:up`）
+- 生产环境：配置 R2（参考 [R2 配置指南](../docs/R2-SETUP.md)）
+
+---
+
+### 3. 端到端测试（需要真实环境）
 
 测试完整流程：API + Worker + Database + CQTAI
 

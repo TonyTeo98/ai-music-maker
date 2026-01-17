@@ -147,10 +147,15 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     await updateJobProgress(jobId, 20, WORKER_STEPS.COMPOSE_PARAMS)
     console.log(`[GenerateHandler] Step: ${WORKER_STEPS.COMPOSE_PARAMS}`)
 
-    // 构建音频 URL（从 S3 获取）
+    // 构建音频 URL
     const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000'
     const s3Bucket = process.env.S3_BUCKET || 'aimm-assets'
-    const audioUrl = `${s3Endpoint}/${s3Bucket}/${inputAssetKey}`
+    const r2PublicUrl = process.env.R2_PUBLIC_URL
+
+    // 如果配置了 R2_PUBLIC_URL，使用公开 URL；否则使用 S3 endpoint
+    const audioUrl = r2PublicUrl
+      ? `${r2PublicUrl}/${inputAssetKey}`
+      : `${s3Endpoint}/${s3Bucket}/${inputAssetKey}`
 
     // 获取 Track 信息用于 title
     const track = await prisma.track.findUnique({ where: { id: trackId } })
