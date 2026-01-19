@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { getPresignUrl, uploadToS3, confirmUpload } from '@/lib/api'
+import { useMicrophoneDevices, MicrophoneSelector } from './MicrophoneSelector'
 
 type RecordingStatus = 'idle' | 'recording' | 'preview' | 'uploading' | 'success' | 'error'
 
@@ -38,12 +39,28 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
   const [error, setError] = useState<string | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [isBluetoothDevice, setIsBluetoothDevice] = useState(false)
+  const [showSelector, setShowSelector] = useState(false)
+
+  const {
+    devices,
+    selectedDeviceId,
+    setSelectedDeviceId,
+    hasMultipleDevices,
+    hasBluetooth,
+    isLoading: devicesLoading,
+    error: devicesError,
+  } = useMicrophoneDevices()
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const audioBlobRef = useRef<Blob | null>(null)
+  const fileExtensionRef = useRef<string>('webm')
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -56,9 +73,17 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
       clearInterval(timerRef.current)
       timerRef.current = null
     }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+      audioContextRef.current = null
     }
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl)
@@ -69,35 +94,183 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
     return cleanup
   }, [cleanup])
 
+  const getSupportedMimeType = (): { mimeType: string; extension: string } => {
+    const types = [
+      { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+      { mimeType: 'audio/webm', extension: 'webm' },
+      { mimeType: 'audio/mp4', extension: 'mp4' },
+      { mimeType: 'audio/aac', extension: 'aac' },
+      { mimeType: 'audio/mpeg', extension: 'mp3' },
+    ]
+
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type.mimeType)) {
+        return type
+      }
+    }
+
+    return { mimeType: '', extension: 'webm' }
+  }
+
   const startRecording = async () => {
     setError(null)
     chunksRef.current = []
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Enumerate audio input devices first
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const audioInputs = devices.filter(device => device.kind === 'audioinput')
+      console.log('[AudioRecorder] Available audio input devices:', audioInputs.map(d => ({
+        deviceId: d.deviceId,
+        label: d.label,
+        groupId: d.groupId
+      })))
+
+      // 构建音频约束，使用选中的设备 ID
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }
+
+      // 如果有选中的设备，添加 deviceId 约束
+      if (selectedDeviceId) {
+        audioConstraints.deviceId = { exact: selectedDeviceId }
+      }
+
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: audioConstraints
+        })
+      } catch (err) {
+        // OverconstrainedError 降级处理：移除 deviceId 约束重试
+        if (err instanceof Error && err.name === 'OverconstrainedError') {
+          console.warn('[AudioRecorder] Device constraint failed, falling back to default device')
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            }
+          })
+        } else {
+          throw err
+        }
+      }
       streamRef.current = stream
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      })
+      // Check if audio track is enabled and has proper constraints
+      const audioTrack = stream.getAudioTracks()[0]
+      if (!audioTrack) {
+        throw new Error('无法获取音频轨道')
+      }
+      const settings = audioTrack.getSettings()
+      console.log('[AudioRecorder] Audio track:', audioTrack.label, 'enabled:', audioTrack.enabled)
+      console.log('[AudioRecorder] Audio track settings:', settings)
+
+      // Detect Bluetooth device (but don't block)
+      const isBluetooth = audioTrack.label.toLowerCase().includes('bluetooth') ||
+          audioTrack.label.toLowerCase().includes('airpods') ||
+          audioTrack.label.toLowerCase().includes('headset')
+
+      if (isBluetooth) {
+        console.warn('[AudioRecorder] ⚠️ 检测到蓝牙设备。如果录音失败，请切换到内置麦克风。')
+        setIsBluetoothDevice(true)
+      } else {
+        setIsBluetoothDevice(false)
+      }
+
+      // Set up audio level monitoring
+      const audioContext = new AudioContext()
+      audioContextRef.current = audioContext
+      const source = audioContext.createMediaStreamSource(stream)
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 256
+      analyser.smoothingTimeConstant = 0.8
+      source.connect(analyser)
+      analyserRef.current = analyser
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      let silentChunks = 0
+      let hasDetectedAudio = false
+      const checkAudioLevel = () => {
+        analyser.getByteFrequencyData(dataArray)
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length
+
+        if (average < 1) {
+          silentChunks++
+          // After 10 seconds of silence, show helpful error
+          if (silentChunks === 100 && !hasDetectedAudio) {
+            console.error('[AudioRecorder] ❌ 10秒内未检测到音频输入')
+            if (isBluetooth) {
+              setError('蓝牙设备无法录音。请在系统设置中切换到内置麦克风或有线麦克风，然后重新开始录音。')
+            } else {
+              setError('未检测到音频输入。请检查麦克风权限和音量设置。')
+            }
+            stopRecording()
+          } else if (silentChunks > 50) {
+            console.warn('[AudioRecorder] No audio input detected. Average level:', average)
+          }
+        } else {
+          if (!hasDetectedAudio) {
+            console.log('[AudioRecorder] ✅ 检测到音频输入，音量:', average.toFixed(2))
+            hasDetectedAudio = true
+          }
+          silentChunks = 0
+        }
+
+        if (silentChunks % 10 === 0 && silentChunks > 0) {
+          console.log('[AudioRecorder] Audio level:', average.toFixed(2), 'silent chunks:', silentChunks)
+        }
+
+        animationFrameRef.current = requestAnimationFrame(checkAudioLevel)
+      }
+      checkAudioLevel()
+
+      const { mimeType, extension } = getSupportedMimeType()
+      fileExtensionRef.current = extension
+      const options = mimeType ? { mimeType } : undefined
+      const mediaRecorder = new MediaRecorder(stream, options)
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
+        if (e.data && e.data.size > 0) {
           chunksRef.current.push(e.data)
+          console.log(`[AudioRecorder] Data chunk received: ${e.data.size} bytes, total chunks: ${chunksRef.current.length}`)
         }
       }
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        console.log(`[AudioRecorder] Recording stopped, total chunks: ${chunksRef.current.length}`)
+        const actualMimeType = mimeType || mediaRecorder.mimeType
+        const blob = new Blob(chunksRef.current, { type: actualMimeType })
+        console.log(`[AudioRecorder] Final blob size: ${blob.size} bytes, type: ${blob.type}`)
         audioBlobRef.current = blob
         const url = URL.createObjectURL(blob)
         setAudioUrl(url)
         setStatus('preview')
         stream.getTracks().forEach(track => track.stop())
+
+        // Clean up audio context
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+          animationFrameRef.current = null
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close()
+          audioContextRef.current = null
+        }
       }
 
-      mediaRecorder.start(1000)
+      mediaRecorder.onerror = (e) => {
+        console.error('[AudioRecorder] MediaRecorder error:', e)
+        setError('录音过程中发生错误')
+        setStatus('error')
+      }
+
+      console.log('[AudioRecorder] Starting recording with mimeType:', mimeType || 'default')
+      mediaRecorder.start(100)  // Changed from 1000ms to 100ms for more frequent data collection
       setStatus('recording')
       setDuration(0)
 
@@ -126,6 +299,10 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
       timerRef.current = null
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      // Request any remaining data before stopping
+      if (mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.requestData()
+      }
       mediaRecorderRef.current.stop()
     }
   }
@@ -137,8 +314,10 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
     setUploadProgress(10)
 
     try {
-      const filename = `recording_${Date.now()}.webm`
-      const { assetId, uploadUrl } = await getPresignUrl(filename, 'audio/webm')
+      const extension = fileExtensionRef.current
+      const filename = `recording_${Date.now()}.${extension}`
+      const contentType = audioBlobRef.current.type || 'audio/webm'
+      const { assetId, uploadUrl } = await getPresignUrl(filename, contentType)
       setUploadProgress(30)
 
       await uploadToS3(uploadUrl, audioBlobRef.current)
@@ -162,6 +341,7 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
     setError(null)
     setAudioUrl(null)
     setUploadProgress(0)
+    setIsBluetoothDevice(false)
     audioBlobRef.current = null
   }
 
@@ -184,12 +364,33 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
           </button>
           <p className="text-neutral-700 font-medium mt-5">点击开始录音</p>
           <p className="text-sm text-neutral-400 mt-1">最长 5 分钟</p>
+
+          {/* 设备切换按钮 - 智能显示 */}
+          {(hasMultipleDevices || hasBluetooth) && (
+            <button
+              onClick={() => setShowSelector(true)}
+              className="mt-4 flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-600 hover:text-primary-600 hover:bg-neutral-100 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              切换麦克风
+            </button>
+          )}
         </div>
       )}
 
       {/* Recording State */}
       {status === 'recording' && (
         <div className="flex flex-col items-center justify-center py-12 px-6 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 animate-fade-in">
+          {isBluetoothDevice && (
+            <div className="mb-4 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+              <p className="text-yellow-100 text-sm text-center">
+                ⚠️ 使用蓝牙设备，如无声音请切换到内置麦克风
+              </p>
+            </div>
+          )}
           <div className="flex items-center gap-2 mb-4">
             <span className="w-3 h-3 bg-white rounded-full animate-recording" />
             <span className="text-white font-medium">录音中</span>
@@ -292,6 +493,18 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
           </button>
         </div>
       )}
+
+      {/* 麦克风设备选择器 */}
+      <MicrophoneSelector
+        isOpen={showSelector}
+        onClose={() => setShowSelector(false)}
+        devices={devices}
+        selectedDeviceId={selectedDeviceId}
+        onSelect={setSelectedDeviceId}
+        hasBluetooth={hasBluetooth}
+        isLoading={devicesLoading}
+        error={devicesError}
+      />
     </div>
   )
 }

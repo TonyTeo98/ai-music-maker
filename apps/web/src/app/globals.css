@@ -402,3 +402,17 @@ input[type="range"]::-moz-range-thumb {
 .sound-wave-bar:nth-child(5) {
   animation-delay: 0.4s;
 }
+
+/* Slide up animation for bottom sheet */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
