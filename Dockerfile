@@ -7,8 +7,8 @@ RUN corepack enable && corepack prepare pnpm@9.15.1 --activate
 # 设置工作目录
 WORKDIR /app
 
-# 复制 package.json 和 lockfile
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# 复制 package.json、lockfile 和 pnpm 配置
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY workers/media/package.json ./workers/media/
@@ -26,9 +26,9 @@ FROM base AS builder
 WORKDIR /app
 
 # 生成 Prisma Client
-RUN cd packages/shared && pnpm exec prisma generate
+RUN cd apps/api && pnpm exec prisma generate
 
-# 构建所有应用（使用 turbo）
+# 构建所有应用
 RUN pnpm build
 
 # ===== Stage 3: API 服务 =====
@@ -43,18 +43,17 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 
-# 只安装生产依赖
+# 安装生产依赖
 RUN pnpm install --prod --frozen-lockfile
 
 # 复制构建产物
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
-# 复制 Prisma schema（运行时需要）
-COPY --from=builder /app/packages/shared/prisma ./packages/shared/prisma
-
-# 生成 Prisma Client（生产环境）
-RUN cd packages/shared && pnpm exec prisma generate
+# 复制 Prisma Client
+COPY --from=builder /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma ./node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma
+COPY --from=builder /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma ./node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma
 
 ENV NODE_ENV=production
 ENV PORT=3001
@@ -75,18 +74,17 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY workers/media/package.json ./workers/media/
 COPY packages/shared/package.json ./packages/shared/
 
-# 只安装生产依赖
+# 安装生产依赖
 RUN pnpm install --prod --frozen-lockfile
 
 # 复制构建产物
 COPY --from=builder /app/workers/media/dist ./workers/media/dist
-COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
-# 复制 Prisma schema（运行时需要）
-COPY --from=builder /app/packages/shared/prisma ./packages/shared/prisma
-
-# 生成 Prisma Client（生产环境）
-RUN cd packages/shared && pnpm exec prisma generate
+# 复制 Prisma Client
+COPY --from=builder /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma ./node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma
+COPY --from=builder /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma ./node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/.prisma
 
 ENV NODE_ENV=production
 

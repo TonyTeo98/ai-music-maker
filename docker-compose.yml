@@ -1,9 +1,18 @@
-# AI Music Maker - 本地开发环境
-# 启动: docker-compose up -d
-# 停止: docker-compose down
-# 查看日志: docker-compose logs -f
+# AI Music Maker - Docker Compose 配置
+#
+# 使用方式:
+#   docker compose up -d                    # 仅启动基础设施（开发模式，前后端本地运行）
+#   docker compose --profile backend up -d  # 基础设施 + API + Worker
+#   docker compose --profile full up -d     # 全部服务（含 Web 前端）
+#
+# 常用命令:
+#   docker compose down                     # 停止所有服务
+#   docker compose logs -f api worker       # 查看日志
+#   docker compose ps                       # 查看状态
 
 services:
+  # ===== 基础设施（默认启动）=====
+
   postgres:
     image: postgres:16-alpine
     container_name: aimm-postgres
@@ -37,42 +46,10 @@ services:
       timeout: 5s
       retries: 5
 
-  minio:
-    image: minio/minio:latest
-    container_name: aimm-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
-    ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Console UI
-    volumes:
-      - ./.docker-data/minio:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # ===== 后端服务（需要 --profile backend 或 --profile full）=====
 
-  # MinIO 初始化：创建默认 bucket
-  minio-init:
-    image: minio/mc:latest
-    container_name: aimm-minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 minioadmin minioadmin123;
-      mc mb local/aimm-assets --ignore-existing;
-      mc anonymous set download local/aimm-assets/public;
-      echo 'Bucket aimm-assets created';
-      "
-
-  # API 服务
   api:
+    profiles: ["backend", "full"]
     build:
       context: .
       target: api
@@ -99,8 +76,8 @@ services:
       retries: 5
       start_period: 30s
 
-  # Worker 服务
   worker:
+    profiles: ["backend", "full"]
     build:
       context: .
       target: worker
@@ -120,8 +97,10 @@ services:
       api:
         condition: service_healthy
 
-  # Web 服务
+  # ===== 前端服务（需要 --profile full）=====
+
   web:
+    profiles: ["full"]
     build:
       context: .
       target: web
