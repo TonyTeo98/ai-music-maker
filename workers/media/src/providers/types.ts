@@ -10,8 +10,13 @@ export interface GenerateRequest {
   // 扩展参数
   lyrics?: string
   title?: string
-  voiceType?: 'm' | 'f'
+  voiceType?: 'm' | 'f' | 'instrumental'
   excludeStyles?: string[]
+  // CQTAI 高级参数
+  model?: 'v40' | 'v45' | 'v45+' | 'v45-lite' | 'v50'
+  styleWeight?: number  // 0-1，风格遵循强度
+  weirdnessConstraint?: number  // 0-1，创意程度
+  audioWeight?: number  // 0-1，音频要素权重
 }
 
 export interface GenerateResult {
@@ -23,6 +28,7 @@ export interface GenerateResult {
     imageUrl: string
     imageLargeUrl: string
     duration: number
+    lyrics: string // AI 生成的歌词
   }[]
   error?: string
 }

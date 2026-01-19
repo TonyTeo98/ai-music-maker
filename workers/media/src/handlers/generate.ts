@@ -29,6 +29,11 @@ export interface GenerateJobData {
   lyrics?: string
   voiceType?: 'female' | 'male' | 'instrumental'
   excludeStyles?: string[]
+  // CQTAI 高级参数
+  model?: 'v40' | 'v45' | 'v45+' | 'v45-lite' | 'v50'
+  styleWeight?: number  // 0-1
+  weirdnessConstraint?: number  // 0-1
+  audioWeight?: number  // 0-1
 }
 
 interface StepTiming {
@@ -101,8 +106,12 @@ function reportMockScores(traceId: string) {
 }
 
 export async function handleGenerateJob(job: Job<GenerateJobData>) {
-  const { trackId, jobId, style, inputAssetKey, segment, lyrics, voiceType, excludeStyles } = job.data
+  const {
+    trackId, jobId, style, inputAssetKey, segment, lyrics, voiceType, excludeStyles,
+    model, styleWeight, weirdnessConstraint, audioWeight
+  } = job.data
   const traceId = jobId // 使用 jobId 作为 trace_id
+  const jobStartTime = new Date() // 端到端计时起点
 
   console.log(`[GenerateHandler] Starting job ${jobId} for track ${trackId}`)
 
@@ -111,10 +120,17 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     track_id: trackId,
     job_id: jobId,
     audio_source: 'upload',
+    style,
+    hasSegment: !!segment,
+    hasLyrics: !!lyrics,
+    voiceType: voiceType || 'default',
   })
 
   const stepTimings: StepTiming[] = []
   let currentStepStart = new Date()
+  // 用于端到端统计
+  let providerSubmitMs = 0
+  let providerPollMs = 0
 
   try {
     // 1. 更新 Job 状态为 running
@@ -190,6 +206,8 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     await updateJobProgress(jobId, 30, WORKER_STEPS.MUSIC_GENERATE)
     console.log(`[GenerateHandler] Step: ${WORKER_STEPS.MUSIC_GENERATE}`)
 
+    // 3a. 记录提交请求
+    const submitStartTime = new Date()
     const { taskId } = await cqtaiProvider.submitGenerate({
       audioUrl,
       style,
@@ -198,18 +216,65 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       title: track?.title || undefined,
       voiceType: mappedVoiceType,
       excludeStyles,
+      model,
+      styleWeight,
+      weirdnessConstraint,
+      audioWeight,
+    })
+    const submitEndTime = new Date()
+    const submitDurationMs = submitEndTime.getTime() - submitStartTime.getTime()
+    providerSubmitMs = submitDurationMs // 记录到端到端统计
+
+    // 上报 Provider 提交 span
+    langfuseService.createSpan(traceId, {
+      name: 'provider_submit',
+      startTime: submitStartTime,
+      endTime: submitEndTime,
+      input: {
+        provider: 'cqtai',
+        audioUrl: audioUrl.substring(0, 80) + '...',
+        style,
+        hasLyrics: !!lyrics,
+        voiceType: mappedVoiceType,
+      },
+      output: {
+        taskId,
+        durationMs: submitDurationMs,
+      },
     })
 
-    console.log(`[GenerateHandler] Provider task submitted: ${taskId}`)
+    console.log(`[GenerateHandler] Provider task submitted: ${taskId} (${submitDurationMs}ms)`)
 
     // Step 4: Poll for completion
     let attempts = 0
     const maxAttempts = 60 // 最多轮询 60 次（约 5 分钟）
+    const pollStartTime = new Date()
+    let lastStatus = 'unknown'
+    const statusTransitions: Array<{ status: string; attemptNum: number; timestamp: Date }> = []
+
     let result = await cqtaiProvider.queryTask(taskId)
+    statusTransitions.push({ status: result.status, attemptNum: 0, timestamp: new Date() })
+    lastStatus = result.status
 
     while (result.status !== 'completed' && result.status !== 'failed') {
       attempts++
       if (attempts >= maxAttempts) {
+        // 上报轮询超时
+        langfuseService.createSpan(traceId, {
+          name: 'provider_poll_timeout',
+          startTime: pollStartTime,
+          endTime: new Date(),
+          output: {
+            totalAttempts: attempts,
+            lastStatus,
+            durationMs: Date.now() - pollStartTime.getTime(),
+            statusTransitions: statusTransitions.map(t => ({
+              status: t.status,
+              attemptNum: t.attemptNum,
+              elapsedMs: t.timestamp.getTime() - pollStartTime.getTime(),
+            })),
+          },
+        })
         throw new Error('GEN_PROVIDER_TIMEOUT')
       }
 
@@ -220,7 +285,38 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       // 等待 5 秒后重试
       await new Promise((resolve) => setTimeout(resolve, 5000))
       result = await cqtaiProvider.queryTask(taskId)
+
+      // 记录状态转换
+      if (result.status !== lastStatus) {
+        statusTransitions.push({ status: result.status, attemptNum: attempts, timestamp: new Date() })
+        console.log(`[GenerateHandler] Poll #${attempts}: status ${lastStatus} → ${result.status}`)
+        lastStatus = result.status
+      }
     }
+
+    const pollEndTime = new Date()
+    const pollDurationMs = pollEndTime.getTime() - pollStartTime.getTime()
+    providerPollMs = pollDurationMs // 记录到端到端统计
+
+    // 上报轮询完成 span
+    langfuseService.createSpan(traceId, {
+      name: 'provider_poll',
+      startTime: pollStartTime,
+      endTime: pollEndTime,
+      input: { taskId, maxAttempts, pollIntervalMs: 5000 },
+      output: {
+        finalStatus: result.status,
+        totalAttempts: attempts + 1, // 包括初始查询
+        durationMs: pollDurationMs,
+        statusTransitions: statusTransitions.map(t => ({
+          status: t.status,
+          attemptNum: t.attemptNum,
+          elapsedMs: t.timestamp.getTime() - pollStartTime.getTime(),
+        })),
+      },
+    })
+
+    console.log(`[GenerateHandler] Polling completed: ${attempts + 1} attempts, ${pollDurationMs}ms`)
 
     if (result.status === 'failed') {
       throw new Error(result.error || 'GEN_PROVIDER_ERROR')
@@ -234,6 +330,9 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       output: {
         status: result.status,
         variantCount: result.variants?.length || 0,
+        submitDurationMs,
+        pollDurationMs,
+        pollAttempts: attempts + 1,
       },
     })
 
@@ -251,12 +350,13 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
             variant: variant.variant,
             batchIndex: newBatchIndex,
             audioUrl: variant.audioUrl,
-            imageUrl: variant.imageUrl, // 新增
-            imageLargeUrl: variant.imageLargeUrl, // 新增
+            imageUrl: variant.imageUrl,
+            imageLargeUrl: variant.imageLargeUrl,
             duration: variant.duration,
+            lyrics: variant.lyrics, // 保存 AI 生成的歌词
             provider: 'cqtai',
-            downloadStatus: 'pending', // 新增：初始状态
-            imageDownloadStatus: 'pending', // 新增
+            downloadStatus: 'pending',
+            imageDownloadStatus: 'pending',
           },
         })
 
@@ -307,6 +407,29 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       variantCount: result.variants?.length || 0,
     })
 
+    // 计算端到端耗时
+    const jobEndTime = new Date()
+    const totalDurationMs = jobEndTime.getTime() - jobStartTime.getTime()
+    const otherStepsMs = totalDurationMs - providerSubmitMs - providerPollMs
+
+    // 上报端到端汇总 span
+    langfuseService.createSpan(traceId, {
+      name: 'job_summary',
+      startTime: jobStartTime,
+      endTime: jobEndTime,
+      output: {
+        totalDurationMs,
+        totalDurationSec: Math.round(totalDurationMs / 1000),
+        breakdown: {
+          providerSubmitMs,
+          providerPollMs,
+          otherStepsMs, // 包括数据库操作、参数组装等
+        },
+        variantCount: result.variants?.length || 0,
+        status: 'succeeded',
+      },
+    })
+
     // 上报所有 step spans 到 Langfuse
     for (const step of stepTimings) {
       recordStep(traceId, step)
@@ -315,14 +438,40 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     // 上报 mock scores
     reportMockScores(traceId)
 
+    // 上报端到端耗时 scores
+    langfuseService.createScores(traceId, [
+      { name: 'job_total_duration_ms', value: totalDurationMs, comment: 'End-to-end job duration' },
+      { name: 'provider_submit_ms', value: providerSubmitMs, comment: 'Provider submit request duration' },
+      { name: 'provider_poll_ms', value: providerPollMs, comment: 'Provider polling duration' },
+      { name: 'job_success', value: 1, comment: 'Job completed successfully' },
+    ])
+
     // 确保数据发送到 Langfuse
     await langfuseService.flush()
 
-    console.log(`[GenerateHandler] Job ${jobId} completed successfully`)
+    console.log(`[GenerateHandler] Job ${jobId} completed successfully (${totalDurationMs}ms total, ${providerPollMs}ms polling)`)
     return { success: true, taskId }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error(`[GenerateHandler] Job ${jobId} failed:`, errorMsg)
+
+    // 计算失败时的端到端耗时
+    const jobEndTime = new Date()
+    const totalDurationMs = jobEndTime.getTime() - jobStartTime.getTime()
+
+    // 上报失败汇总 span
+    langfuseService.createSpan(traceId, {
+      name: 'job_summary',
+      startTime: jobStartTime,
+      endTime: jobEndTime,
+      output: {
+        totalDurationMs,
+        totalDurationSec: Math.round(totalDurationMs / 1000),
+        status: 'failed',
+        error: errorMsg,
+        failedAt: stepTimings[stepTimings.length - 1]?.name || 'unknown',
+      },
+    })
 
     // 上报错误 span
     langfuseService.createSpan(traceId, {
@@ -337,6 +486,12 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     for (const step of stepTimings) {
       recordStep(traceId, step)
     }
+
+    // 上报失败 scores
+    langfuseService.createScores(traceId, [
+      { name: 'job_total_duration_ms', value: totalDurationMs, comment: 'Job duration before failure' },
+      { name: 'job_success', value: 0, comment: `Job failed: ${errorMsg}` },
+    ])
 
     await langfuseService.flush()
 

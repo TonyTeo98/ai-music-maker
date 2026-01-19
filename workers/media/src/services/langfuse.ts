@@ -15,6 +15,11 @@ interface TraceMetadata {
   audio_source?: string
   track_id?: string
   job_id?: string
+  // Generate job 额外字段
+  style?: string
+  hasSegment?: boolean
+  hasLyrics?: boolean
+  voiceType?: string
 }
 
 interface SpanData {

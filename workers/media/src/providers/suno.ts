@@ -85,6 +85,7 @@ export class SunoProvider implements MusicProvider {
           imageUrl: response.image_url || '',
           imageLargeUrl: response.image_large_url || '',
           duration: response.duration || 0,
+          lyrics: '', // Suno API 暂不返回歌词
         },
       ]
       if (response.audio_url_b) {
@@ -94,6 +95,7 @@ export class SunoProvider implements MusicProvider {
           imageUrl: response.image_url || '',
           imageLargeUrl: response.image_large_url || '',
           duration: response.duration || 0,
+          lyrics: '', // Suno API 暂不返回歌词
         })
       }
     }
@@ -129,6 +131,7 @@ export class SunoProvider implements MusicProvider {
           imageUrl: 'https://example.com/mock-image-a.jpg',
           imageLargeUrl: 'https://example.com/mock-image-large-a.jpg',
           duration: 180,
+          lyrics: '[Verse 1]\nMock lyrics for testing\n\n[Chorus]\nThis is a test song',
         },
         {
           variant: 'B',
@@ -136,6 +139,7 @@ export class SunoProvider implements MusicProvider {
           imageUrl: 'https://example.com/mock-image-b.jpg',
           imageLargeUrl: 'https://example.com/mock-image-large-b.jpg',
           duration: 175,
+          lyrics: '[Verse 1]\nMock lyrics for testing\n\n[Chorus]\nThis is a test song',
         },
       ],
     }

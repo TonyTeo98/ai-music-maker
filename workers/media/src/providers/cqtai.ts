@@ -69,21 +69,29 @@ export class CQTAIProvider implements MusicProvider {
       return { taskId: `mock_${Date.now()}` }
     }
 
+    // 判断是否为纯伴奏
+    const isInstrumental = request.voiceType === 'instrumental'
+
+    // 根据文档：customMode: true 时
+    // - makeInstrumental: true 需提供 tags 和 title
+    // - makeInstrumental: false 需提供 tags、prompt 和 title
     const response = await this.request<CQTAIGenerateResponse>('/api/cqt/generator/suno', {
       method: 'POST',
       body: JSON.stringify({
         task: 'upload_cover',
-        model: 'v50',
+        model: request.model || 'v50',
         audioUrl: request.audioUrl,
-        customMode: false,
-        makeInstrumental: false,
-        prompt: request.lyrics || '根据音频生成音乐',
-        tags: request.style || 'Pop',
-        title: request.title || '未命名作品',
-        vocalGender: request.voiceType || 'f',
-        styleWeight: 0.65,
-        weirdnessConstraint: 0.65,
-        audioWeight: 0.65,
+        customMode: true,  // 使用自定义模式以支持更多参数
+        makeInstrumental: isInstrumental,
+        prompt: request.lyrics || '',  // customMode: true 时必填（makeInstrumental: false 时）
+        tags: request.style || 'Pop',  // customMode: true 时必填
+        negativeTags: request.excludeStyles?.join(', ') || '',
+        title: request.title || '未命名作品',  // customMode: true 时必填
+        // instrumental 时不传 vocalGender
+        vocalGender: isInstrumental ? undefined : request.voiceType,
+        styleWeight: request.styleWeight ?? 0.65,
+        weirdnessConstraint: request.weirdnessConstraint ?? 0.65,
+        audioWeight: request.audioWeight ?? 0.65,
       }),
     })
 
@@ -133,6 +141,7 @@ export class CQTAIProvider implements MusicProvider {
         imageUrl: item.image_url || '',
         imageLargeUrl: item.image_large_url || '',
         duration: item.metadata?.duration || item.duration || 0,
+        lyrics: item.metadata?.prompt || '', // 提取 AI 生成的歌词
       }))
     }
 
@@ -167,6 +176,7 @@ export class CQTAIProvider implements MusicProvider {
           imageUrl: 'https://example.com/mock-image-a.jpg',
           imageLargeUrl: 'https://example.com/mock-image-large-a.jpg',
           duration: 180,
+          lyrics: '[Verse 1]\nMock lyrics for testing\n\n[Chorus]\nThis is a test song',
         },
         {
           variant: 'B',
@@ -174,6 +184,7 @@ export class CQTAIProvider implements MusicProvider {
           imageUrl: 'https://example.com/mock-image-b.jpg',
           imageLargeUrl: 'https://example.com/mock-image-large-b.jpg',
           duration: 175,
+          lyrics: '[Verse 1]\nMock lyrics for testing\n\n[Chorus]\nThis is a test song',
         },
       ],
     }
