@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { getTrackHistory, setPrimaryVariant, createShare, type TrackHistory, type HistoryBatch } from '@/lib/api'
+import { LyricsDisplay } from '@/components/LyricsDisplay'
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr)
@@ -335,6 +336,13 @@ function BatchCard({
               </div>
             ))}
           </div>
+
+          {/* 歌词展示（使用第一个变体的歌词，A/B 版本歌词相同） */}
+          {batch.variants.length > 0 && batch.variants[0].lyrics && (
+            <div className="mt-4">
+              <LyricsDisplay lyrics={batch.variants[0].lyrics} maxHeight="300px" />
+            </div>
+          )}
         </div>
       )}
     </div>

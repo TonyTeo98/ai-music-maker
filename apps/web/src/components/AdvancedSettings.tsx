@@ -5,9 +5,10 @@ import { useState } from 'react'
 export interface AdvancedSettingsData {
   excludeStyles: string[]
   voiceType: 'female' | 'male' | 'instrumental' | null
-  textMode: 'exact' | 'auto' | null
-  tension: number
-  styleLock: number
+  model: 'v40' | 'v45' | 'v45+' | 'v45-lite' | 'v50'
+  tension: number  // 0-100，映射到 weirdnessConstraint (0-1)
+  styleLock: number  // 0-100，映射到 styleWeight (0-1)
+  audioWeight: number  // 0-100，映射到 audioWeight (0-1)
 }
 
 interface AdvancedSettingsProps {
@@ -31,9 +32,12 @@ const VOICE_TYPE_OPTIONS = [
   { value: 'instrumental', label: '纯伴奏', icon: '♪' },
 ] as const
 
-const TEXT_MODE_OPTIONS = [
-  { value: 'exact', label: '按我写的来', description: '严格按照歌词生成' },
-  { value: 'auto', label: '系统帮我整理', description: 'AI 优化歌词结构' },
+const MODEL_OPTIONS = [
+  { value: 'v50', label: 'V5.0', description: '最新模型，质量最高' },
+  { value: 'v45+', label: 'V4.5+', description: '增强版，平衡性能' },
+  { value: 'v45', label: 'V4.5', description: '标准版' },
+  { value: 'v45-lite', label: 'V4.5 Lite', description: '轻量版，速度快' },
+  { value: 'v40', label: 'V4.0', description: '经典版' },
 ] as const
 
 export function AdvancedSettings({ value, onChange, className = '' }: AdvancedSettingsProps) {
@@ -50,16 +54,17 @@ export function AdvancedSettings({ value, onChange, className = '' }: AdvancedSe
     onChange({ ...value, voiceType: value.voiceType === type ? null : type })
   }
 
-  const setTextMode = (mode: typeof value.textMode) => {
-    onChange({ ...value, textMode: value.textMode === mode ? null : mode })
+  const setModel = (model: typeof value.model) => {
+    onChange({ ...value, model })
   }
 
   const hasSettings =
     value.excludeStyles.length > 0 ||
     value.voiceType !== null ||
-    value.textMode !== null ||
+    value.model !== 'v50' ||
     value.tension !== 50 ||
-    value.styleLock !== 50
+    value.styleLock !== 50 ||
+    value.audioWeight !== 65
 
   return (
     <div className={`rounded-2xl border border-neutral-200 overflow-hidden transition-all duration-300 ${className}`}>
@@ -156,18 +161,18 @@ export function AdvancedSettings({ value, onChange, className = '' }: AdvancedSe
             </div>
           </div>
 
-          {/* Text Mode */}
+          {/* Model Selection */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-3">
-              歌词处理方式
+              AI 模型
             </label>
             <div className="space-y-2">
-              {TEXT_MODE_OPTIONS.map((option) => {
-                const isSelected = value.textMode === option.value
+              {MODEL_OPTIONS.map((option) => {
+                const isSelected = value.model === option.value
                 return (
                   <button
                     key={option.value}
-                    onClick={() => setTextMode(option.value)}
+                    onClick={() => setModel(option.value)}
                     className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
                       isSelected
                         ? 'border-primary-500 bg-primary-50'
@@ -238,6 +243,26 @@ export function AdvancedSettings({ value, onChange, className = '' }: AdvancedSe
                 <span>严格遵循</span>
               </div>
             </div>
+
+            {/* Audio Weight Slider */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-neutral-700">音频权重</label>
+                <span className="text-sm text-primary-600 font-medium">{value.audioWeight}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={value.audioWeight}
+                onChange={(e) => onChange({ ...value, audioWeight: Number(e.target.value) })}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-neutral-400 mt-2">
+                <span>弱参考</span>
+                <span>强参考</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -248,7 +273,8 @@ export function AdvancedSettings({ value, onChange, className = '' }: AdvancedSe
 export const defaultAdvancedSettings: AdvancedSettingsData = {
   excludeStyles: [],
   voiceType: null,
-  textMode: null,
+  model: 'v50',
   tension: 50,
   styleLock: 50,
+  audioWeight: 65,
 }

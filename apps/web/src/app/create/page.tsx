@@ -6,6 +6,7 @@ import { AudioInput } from '@/components/AudioInput'
 import { ABPlayer } from '@/components/ABPlayer'
 import { AdvancedSettings, defaultAdvancedSettings, type AdvancedSettingsData } from '@/components/AdvancedSettings'
 import LyricsGeneratorDialog from '@/components/LyricsGeneratorDialog'
+import { LyricsDisplay } from '@/components/LyricsDisplay'
 import { createTrack, startGenerate, getJob, setPrimaryVariant, createShare, type GenerateOptions } from '@/lib/api'
 import { getDeviceId } from '@/hooks/useDeviceId'
 
@@ -33,6 +34,9 @@ interface Variant {
   variant: string
   audioUrl?: string | null
   duration?: number | null
+  imageUrl?: string | null
+  imageLargeUrl?: string | null
+  lyrics?: string | null
 }
 
 export default function CreatePage() {
@@ -108,9 +112,11 @@ export default function CreatePage() {
         segmentEndMs: segment?.endMs,
         excludeStyles: advancedSettings.excludeStyles.length > 0 ? advancedSettings.excludeStyles : undefined,
         voiceType: advancedSettings.voiceType || undefined,
-        textMode: advancedSettings.textMode || undefined,
-        tension: advancedSettings.tension !== 50 ? advancedSettings.tension : undefined,
-        styleLock: advancedSettings.styleLock !== 50 ? advancedSettings.styleLock : undefined,
+        model: advancedSettings.model,
+        // 将 0-100 的值转换为 0-1
+        tension: advancedSettings.tension / 100,
+        styleLock: advancedSettings.styleLock / 100,
+        audioWeight: advancedSettings.audioWeight / 100,
       }
 
       const result = await startGenerate(track.id, options)
@@ -144,9 +150,11 @@ export default function CreatePage() {
         segmentEndMs: segment?.endMs,
         excludeStyles: advancedSettings.excludeStyles.length > 0 ? advancedSettings.excludeStyles : undefined,
         voiceType: advancedSettings.voiceType || undefined,
-        textMode: advancedSettings.textMode || undefined,
-        tension: advancedSettings.tension !== 50 ? advancedSettings.tension : undefined,
-        styleLock: advancedSettings.styleLock !== 50 ? advancedSettings.styleLock : undefined,
+        model: advancedSettings.model,
+        // 将 0-100 的值转换为 0-1
+        tension: advancedSettings.tension / 100,
+        styleLock: advancedSettings.styleLock / 100,
+        audioWeight: advancedSettings.audioWeight / 100,
       }
 
       const result = await startGenerate(trackId, options)
@@ -486,6 +494,13 @@ export default function CreatePage() {
               primaryVariantId={primaryVariantId}
               onSelectPrimary={handleSelectPrimary}
             />
+
+            {/* 歌词展示区域 */}
+            {variants.length > 0 && variants[0].lyrics && (
+              <div className="mt-6">
+                <LyricsDisplay lyrics={variants[0].lyrics} />
+              </div>
+            )}
 
             <div className="mt-6 pt-4 border-t">
               {primaryVariantId ? (

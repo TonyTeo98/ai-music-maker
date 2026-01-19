@@ -98,6 +98,7 @@ interface JobResponse {
     duration?: number | null
     imageUrl?: string | null
     imageLargeUrl?: string | null
+    lyrics?: string | null
   }[]
   createdAt: string
   startedAt?: string
@@ -126,9 +127,10 @@ export interface GenerateOptions {
   segmentEndMs?: number
   excludeStyles?: string[]
   voiceType?: 'female' | 'male' | 'instrumental'
-  textMode?: 'exact' | 'auto'
-  tension?: number
-  styleLock?: number
+  model?: 'v40' | 'v45' | 'v45+' | 'v45-lite' | 'v50'
+  tension?: number  // 0-1
+  styleLock?: number  // 0-1
+  audioWeight?: number  // 0-1
 }
 
 export async function startGenerate(trackId: string, options: GenerateOptions) {
@@ -241,6 +243,7 @@ export interface HistoryVariant {
   duration?: number | null
   imageUrl?: string | null
   imageLargeUrl?: string | null
+  lyrics?: string | null
   isPrimary: boolean
 }
 

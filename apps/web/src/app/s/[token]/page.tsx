@@ -1,8 +1,9 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { SharePlayer } from './SharePlayer'
+import { LyricsDisplay } from '@/components/LyricsDisplay'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 interface ShareDetail {
   id: string
@@ -20,6 +21,7 @@ interface ShareDetail {
     duration?: number
     imageUrl?: string
     imageLargeUrl?: string
+    lyrics?: string
   } | null
   viewCount: number
   createdAt: string
@@ -106,6 +108,13 @@ export default async function SharePage({
               </div>
             )}
           </div>
+
+          {/* Lyrics */}
+          {share.variant?.lyrics && (
+            <div className="px-4 md:px-6 pb-4">
+              <LyricsDisplay lyrics={share.variant.lyrics} maxHeight="300px" />
+            </div>
+          )}
 
           {/* Footer */}
           <div className="px-4 md:px-6 pb-4 md:pb-6">

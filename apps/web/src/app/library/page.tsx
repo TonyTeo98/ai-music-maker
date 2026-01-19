@@ -12,8 +12,8 @@ interface Track {
   style?: string
   primaryVariantId?: string
   audioUrl?: string
-  imageUrl?: string
-  imageLargeUrl?: string
+  imageUrl?: string | null
+  imageLargeUrl?: string | null
   duration?: number
   createdAt: string
 }
