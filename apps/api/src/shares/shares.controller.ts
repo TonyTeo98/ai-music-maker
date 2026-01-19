@@ -135,6 +135,9 @@ export class SharesController {
             variant: primaryVariant.variant,
             audioUrl: primaryVariant.audioUrl ?? undefined,
             duration: primaryVariant.duration ?? undefined,
+            imageUrl: primaryVariant.imageUrl ?? undefined,
+            imageLargeUrl: primaryVariant.imageLargeUrl ?? undefined,
+            lyrics: primaryVariant.lyrics ?? undefined,
           }
         : null,
       viewCount: share.viewCount + 1,

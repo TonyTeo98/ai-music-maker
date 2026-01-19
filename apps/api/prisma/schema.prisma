@@ -80,6 +80,7 @@ model TrackVariant {
   // 生成结果
   audioUrl  String?  // Suno CDN URL (sourceUrl)
   duration  Float?   // 秒
+  lyrics    String?  @db.Text // AI 生成的歌词（从 metadata.prompt 提取）
 
   // 封面图 URL
   imageUrl String? // Suno CDN 标准封面图 URL

@@ -12,6 +12,15 @@ export class VariantDto {
 
   @ApiProperty({ required: false })
   duration?: number | null;
+
+  @ApiProperty({ required: false })
+  imageUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  imageLargeUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  lyrics?: string | null;
 }
 
 export class JobResponseDto {

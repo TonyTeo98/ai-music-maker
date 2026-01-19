@@ -53,6 +53,12 @@ export class TrackListItemDto {
   audioUrl?: string;
 
   @ApiProperty({ required: false })
+  imageUrl?: string;
+
+  @ApiProperty({ required: false })
+  imageLargeUrl?: string;
+
+  @ApiProperty({ required: false })
   duration?: number;
 
   @ApiProperty()
@@ -116,24 +122,31 @@ export class GenerateTrackDto {
   @IsIn(['female', 'male', 'instrumental'])
   voiceType?: 'female' | 'male' | 'instrumental';
 
-  @ApiProperty({ description: 'Text processing mode', required: false, enum: ['exact', 'auto'] })
+  @ApiProperty({ description: 'AI model version', required: false, enum: ['v40', 'v45', 'v45+', 'v45-lite', 'v50'] })
   @IsOptional()
-  @IsIn(['exact', 'auto'])
-  textMode?: 'exact' | 'auto';
+  @IsIn(['v40', 'v45', 'v45+', 'v45-lite', 'v50'])
+  model?: 'v40' | 'v45' | 'v45+' | 'v45-lite' | 'v50';
 
-  @ApiProperty({ description: 'Creative tension (0-100)', required: false })
+  @ApiProperty({ description: 'Creative tension (0-1)', required: false })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Max(100)
+  @Max(1)
   tension?: number;
 
-  @ApiProperty({ description: 'Style lock strength (0-100)', required: false })
+  @ApiProperty({ description: 'Style lock strength (0-1)', required: false })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Max(100)
+  @Max(1)
   styleLock?: number;
+
+  @ApiProperty({ description: 'Audio weight (0-1)', required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  audioWeight?: number;
 }
 
 export class SetPrimaryVariantDto {

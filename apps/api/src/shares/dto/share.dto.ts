@@ -57,6 +57,9 @@ export class ShareDetailDto {
     variant: string;
     audioUrl?: string;
     duration?: number;
+    imageUrl?: string;
+    imageLargeUrl?: string;
+    lyrics?: string;
   } | null;
 
   @ApiProperty()

@@ -21,6 +21,11 @@ export interface GenerateJobData {
   textMode?: 'exact' | 'auto';
   tension?: number;
   styleLock?: number;
+  // CQTAI 高级参数
+  model?: 'v40' | 'v45' | 'v45+' | 'v45-lite' | 'v50';
+  styleWeight?: number;
+  weirdnessConstraint?: number;
+  audioWeight?: number;
 }
 
 export interface DownloadJobData {

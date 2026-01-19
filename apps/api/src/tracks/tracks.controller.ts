@@ -83,6 +83,8 @@ export class TracksController {
         style: track.style ?? undefined,
         primaryVariantId: track.primaryVariantId ?? undefined,
         audioUrl: primaryVariant?.audioUrl ?? undefined,
+        imageUrl: primaryVariant?.imageUrl ?? undefined,
+        imageLargeUrl: primaryVariant?.imageLargeUrl ?? undefined,
         duration: primaryVariant?.duration ?? undefined,
         createdAt: track.createdAt,
       };
@@ -205,9 +207,10 @@ export class TracksController {
           } : undefined,
           excludeStyles: dto.excludeStyles,
           voiceType: dto.voiceType,
-          textMode: dto.textMode,
+          model: dto.model,
           tension: dto.tension,
           styleLock: dto.styleLock,
+          audioWeight: dto.audioWeight,
         },
       },
     });
@@ -225,9 +228,10 @@ export class TracksController {
       } : undefined,
       excludeStyles: dto.excludeStyles,
       voiceType: dto.voiceType,
-      textMode: dto.textMode,
-      tension: dto.tension,
-      styleLock: dto.styleLock,
+      model: dto.model,
+      styleWeight: dto.styleLock,  // styleLock 映射到 styleWeight
+      weirdnessConstraint: dto.tension,  // tension 映射到 weirdnessConstraint
+      audioWeight: dto.audioWeight,
     });
 
     return {
@@ -297,7 +301,10 @@ export class TracksController {
       variant: v.variant,
       batchIndex: v.batchIndex,
       audioUrl: v.audioUrl,
+      imageUrl: v.imageUrl,
+      imageLargeUrl: v.imageLargeUrl,
       duration: v.duration,
+      lyrics: v.lyrics,
       inputSimilarity: v.inputSimilarity,
       audioQuality: v.audioQuality,
       createdAt: v.createdAt,
@@ -337,7 +344,10 @@ export class TracksController {
         id: v.id,
         variant: v.variant,
         audioUrl: v.audioUrl,
+        imageUrl: v.imageUrl,
+        imageLargeUrl: v.imageLargeUrl,
         duration: v.duration,
+        lyrics: v.lyrics,
         isPrimary: v.id === track.primaryVariantId,
       })),
     }));

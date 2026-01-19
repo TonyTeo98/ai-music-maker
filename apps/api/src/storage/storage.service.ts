@@ -21,7 +21,7 @@ export class StorageService {
         accessKeyId: this.configService.get<string>('S3_ACCESS_KEY', ''),
         secretAccessKey: this.configService.get<string>('S3_SECRET_KEY', ''),
       },
-      forcePathStyle: true, // Required for MinIO
+      forcePathStyle: true, // Required for R2 path-style access
     });
   }
 
