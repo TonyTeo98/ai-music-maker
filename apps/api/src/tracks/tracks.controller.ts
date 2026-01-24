@@ -10,6 +10,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from '../queue/queue.service';
 import { LangfuseService } from '../langfuse/langfuse.service';
@@ -160,6 +161,7 @@ export class TracksController {
   }
 
   @Post(':id/generate')
+  @Throttle({ short: { limit: 2, ttl: 1000 }, medium: { limit: 10, ttl: 60000 } }) // 生成接口更严格：每秒2次，每分钟10次
   @ApiOperation({ summary: 'Start music generation for a track' })
   @ApiResponse({ status: 201, type: GenerateResponseDto })
   async generateTrack(

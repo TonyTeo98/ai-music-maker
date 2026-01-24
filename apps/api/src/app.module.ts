@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
@@ -16,6 +18,24 @@ import { LyricsModule } from './lyrics/lyrics.module';
       isGlobal: true,
       envFilePath: ['../../.env.local', '../../.env', '.env.local', '.env'],
     }),
+    // Rate Limiting: 默认每分钟 60 请求
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,   // 1 秒
+        limit: 10,   // 每秒 10 请求
+      },
+      {
+        name: 'medium',
+        ttl: 60000,  // 1 分钟
+        limit: 100,  // 每分钟 100 请求
+      },
+      {
+        name: 'long',
+        ttl: 3600000, // 1 小时
+        limit: 1000,  // 每小时 1000 请求
+      },
+    ]),
     PrismaModule,
     QueueModule,
     StorageModule,
@@ -26,6 +46,12 @@ import { LyricsModule } from './lyrics/lyrics.module';
     LyricsModule,
   ],
   controllers: [HealthController],
-  providers: [],
+  providers: [
+    // 全局启用限流
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

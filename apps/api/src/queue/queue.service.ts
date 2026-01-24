@@ -1,7 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
+import { getRedisConnection } from '@aimm/shared';
 
 const QUEUE_NAME = 'media-jobs';
 
@@ -41,16 +40,10 @@ export interface DownloadJobData {
 @Injectable()
 export class QueueService implements OnModuleDestroy {
   private readonly queue: Queue;
-  private readonly connection: IORedis;
 
-  constructor(private configService: ConfigService) {
-    const redisUrl = this.configService.get<string>('REDIS_URL', 'redis://localhost:6379');
-
-    this.connection = new IORedis(redisUrl, {
-      maxRetriesPerRequest: null,
-    });
-
-    this.queue = new Queue(QUEUE_NAME, { connection: this.connection });
+  constructor() {
+    // 使用共享 Redis 连接
+    this.queue = new Queue(QUEUE_NAME, { connection: getRedisConnection() });
   }
 
   async addGenerateJob(data: GenerateJobData): Promise<string> {
@@ -79,6 +72,6 @@ export class QueueService implements OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.queue.close();
-    await this.connection.quit();
+    // 不关闭共享连接，由进程退出时自动清理
   }
 }

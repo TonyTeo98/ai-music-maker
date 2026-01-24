@@ -1,7 +1,9 @@
 // Langfuse 可观测服务封装
 
 import { Langfuse } from 'langfuse'
+import { createLogger } from '@aimm/shared'
 
+const logger = createLogger('Langfuse')
 const AGENT_VERSION = '0.6.0'
 
 interface TraceMetadata {
@@ -53,9 +55,9 @@ class LangfuseService {
         baseUrl: host,
       })
       this.enabled = true
-      console.log('[Langfuse] Initialized successfully')
+      logger.info('Initialized successfully')
     } else {
-      console.log('[Langfuse] Not configured, running in disabled mode')
+      logger.info('Not configured, running in disabled mode')
     }
   }
 
@@ -82,7 +84,7 @@ class LangfuseService {
       metadata: fullMetadata,
     })
 
-    console.log(`[Langfuse] Created trace: ${traceId}`)
+    logger.debug({ traceId }, 'Created trace')
     return trace
   }
 
@@ -102,7 +104,7 @@ class LangfuseService {
       metadata: spanData.metadata,
     })
 
-    console.log(`[Langfuse] Created span: ${spanData.name} for trace ${traceId}`)
+    logger.debug({ traceId, spanName: spanData.name }, 'Created span')
     return span
   }
 
@@ -115,7 +117,7 @@ class LangfuseService {
 
     // Langfuse SDK 的 span 更新通过重新创建实现
     // 实际使用中应该保存 span 引用并调用 end()
-    console.log(`[Langfuse] Updated span: ${spanId}`)
+    logger.debug({ spanId }, 'Updated span')
   }
 
   createScore(traceId: string, scoreData: ScoreData) {
@@ -128,7 +130,7 @@ class LangfuseService {
       comment: scoreData.comment,
     })
 
-    console.log(`[Langfuse] Created score: ${scoreData.name}=${scoreData.value} for trace ${traceId}`)
+    logger.debug({ traceId, scoreName: scoreData.name, value: scoreData.value }, 'Created score')
     return score
   }
 
@@ -145,9 +147,9 @@ class LangfuseService {
 
     try {
       await this.client.flushAsync()
-      console.log('[Langfuse] Flushed successfully')
+      logger.debug('Flushed successfully')
     } catch (error) {
-      console.error('[Langfuse] Flush error:', error)
+      logger.error({ err: error }, 'Flush error')
     }
   }
 
@@ -156,9 +158,9 @@ class LangfuseService {
 
     try {
       await this.client.shutdownAsync()
-      console.log('[Langfuse] Shutdown successfully')
+      logger.info('Shutdown successfully')
     } catch (error) {
-      console.error('[Langfuse] Shutdown error:', error)
+      logger.error({ err: error }, 'Shutdown error')
     }
   }
 }

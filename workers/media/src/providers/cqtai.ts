@@ -2,7 +2,9 @@
 // 文档参考: docs/vendors/catai-suno-api-new.md
 
 import { MusicProvider, GenerateRequest, GenerateResult } from './types'
+import { createLogger } from '@aimm/shared'
 
+const logger = createLogger('CQTAIProvider')
 const CQTAI_API_BASE = process.env.CQTAI_API_BASE_URL || 'https://api.cqtai.com'
 const CQTAI_API_KEY = process.env.CQTAI_API_KEY || ''
 
@@ -65,7 +67,7 @@ export class CQTAIProvider implements MusicProvider {
   async submitGenerate(request: GenerateRequest): Promise<{ taskId: string }> {
     // 开发模式：如果没有 API Key，使用 mock
     if (!CQTAI_API_KEY) {
-      console.log('[CQTAIProvider] No API key, using mock mode')
+      logger.warn('No API key, using mock mode')
       return { taskId: `mock_${Date.now()}` }
     }
 

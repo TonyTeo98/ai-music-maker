@@ -1,9 +1,9 @@
 import { Job } from 'bullmq';
-import { PrismaClient } from '@prisma/client';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { prisma, createLogger } from '@aimm/shared';
 import { langfuseService } from '../services/langfuse';
 
-const prisma = new PrismaClient();
+const logger = createLogger('DownloadHandler');
 
 // 创建 S3 客户端（兼容 Cloudflare R2）
 const s3Client = new S3Client({
@@ -87,7 +87,7 @@ export async function handleDownloadJob(job: Job<DownloadJobData>) {
   const traceId = `download_${variantId}`;
   const jobStartTime = new Date();
 
-  console.log(`[DownloadHandler] Starting download for variant ${variantId}`);
+  logger.info({ variantId }, 'Starting download');
 
   // 创建 Langfuse trace
   langfuseService.createTrace(traceId, {
@@ -176,7 +176,7 @@ export async function handleDownloadJob(job: Job<DownloadJobData>) {
           },
         });
       } catch (error) {
-        console.error(`[DownloadHandler] Failed to download image: ${error}`);
+        logger.error({ err: error }, 'Failed to download image');
         // 记录图片下载失败
         langfuseService.createSpan(traceId, {
           name: 'image_download',
@@ -219,7 +219,7 @@ export async function handleDownloadJob(job: Job<DownloadJobData>) {
           },
         });
       } catch (error) {
-        console.error(`[DownloadHandler] Failed to download large image: ${error}`);
+        logger.error({ err: error }, 'Failed to download large image');
         // 记录大图下载失败
         langfuseService.createSpan(traceId, {
           name: 'image_large_download',
@@ -276,12 +276,12 @@ export async function handleDownloadJob(job: Job<DownloadJobData>) {
 
     await langfuseService.flush();
 
-    console.log(`[DownloadHandler] Download completed: audio=${audioSize} bytes, image=${imageDownloaded}, imageLarge=${imageLargeDownloaded}, totalMs=${totalMs}`);
+    logger.info({ audioSize, imageDownloaded, imageLargeDownloaded, totalMs }, 'Download completed');
     return { success: true, audioKey, imageKey: imageDownloaded ? imageKey : null, imageLargeKey: imageLargeDownloaded ? imageLargeKey : null };
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[DownloadHandler] Download failed for variant ${variantId}:`, errorMsg);
+    logger.error({ variantId, err: errorMsg }, 'Download failed');
 
     // 记录失败 span
     langfuseService.createSpan(traceId, {

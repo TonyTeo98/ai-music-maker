@@ -8,16 +8,32 @@ import * as path from 'path'
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 import { Worker, Queue } from 'bullmq'
-import IORedis from 'ioredis'
 import { handleGenerateJob, GenerateJobData } from './handlers/generate'
 import { handleDownloadJob, DownloadJobData } from './handlers/download'
 import { handleCleanupJob } from './handlers/cleanup'
+import { startHealthServer, setRedisConnected, recordJobProcessed } from './health'
+import { createLogger, getRedisConnection } from '@aimm/shared'
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
+const logger = createLogger('Worker')
+
 const QUEUE_NAME = 'media-jobs'
+const HEALTH_PORT = parseInt(process.env.WORKER_HEALTH_PORT || '3002', 10)
 
-const connection = new IORedis(REDIS_URL, {
-  maxRetriesPerRequest: null,
+// 使用共享 Redis 连接
+const connection = getRedisConnection()
+
+// 监听 Redis 连接状态
+connection.on('connect', () => {
+  setRedisConnected(true)
+})
+
+connection.on('error', () => {
+  setRedisConnected(false)
+  setRedisConnected(false)
+})
+
+connection.on('close', () => {
+  setRedisConnected(false)
 })
 
 // 创建队列（供 API 使用）
@@ -27,8 +43,8 @@ export const mediaQueue = new Queue(QUEUE_NAME, { connection })
 const worker = new Worker(
   QUEUE_NAME,
   async (job) => {
-    console.log(`[Worker] Processing job ${job.id}, type: ${job.name}`)
-    console.log(`[Worker] Data:`, JSON.stringify(job.data, null, 2))
+    logger.info({ jobId: job.id, type: job.name }, 'Processing job')
+    logger.debug({ jobId: job.id, data: job.data }, 'Job data')
 
     switch (job.name) {
       case 'generate':
@@ -38,7 +54,7 @@ const worker = new Worker(
       case 'cleanup':
         return await handleCleanupJob()
       default:
-        console.log(`[Worker] Unknown job type: ${job.name}`)
+        logger.warn({ type: job.name }, 'Unknown job type')
         return { success: false, error: 'Unknown job type' }
     }
   },
@@ -49,15 +65,18 @@ const worker = new Worker(
 )
 
 worker.on('completed', (job) => {
-  console.log(`[Worker] Job ${job.id} completed`)
+  logger.info({ jobId: job.id }, 'Job completed')
+  recordJobProcessed()
 })
 
 worker.on('failed', (job, err) => {
-  console.error(`[Worker] Job ${job?.id} failed:`, err.message)
+  logger.error({ jobId: job?.id, err: err.message }, 'Job failed')
 })
 
-console.log(`[Worker] Media worker started, queue: ${QUEUE_NAME}`)
-console.log(`[Worker] Redis: ${REDIS_URL}`)
+logger.info({ queue: QUEUE_NAME }, 'Media worker started')
+
+// 启动健康检查 HTTP 端点
+startHealthServer(HEALTH_PORT)
 
 // 配置定时清理任务（每天凌晨 2 点）
 ;(async () => {
@@ -72,8 +91,9 @@ console.log(`[Worker] Redis: ${REDIS_URL}`)
         jobId: 'daily-cleanup', // 固定 ID，避免重复添加
       }
     )
-    console.log('[Worker] Cleanup task scheduled: daily at 2:00 AM')
+    logger.info({ schedule: '0 2 * * *' }, 'Cleanup task scheduled')
   } catch (error) {
-    console.error('[Worker] Failed to schedule cleanup task:', error)
+    logger.error({ err: error }, 'Failed to schedule cleanup task')
   }
 })()
+

@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { S3Client, DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { prisma, createLogger } from '@aimm/shared';
 
-const prisma = new PrismaClient();
+const logger = createLogger('CleanupHandler');
 
 // 创建 S3 客户端（兼容 Cloudflare R2）
 const s3Client = new S3Client({
@@ -46,7 +46,7 @@ async function deleteObjects(keys: string[]): Promise<{
 
     return { deleted, errors };
   } catch (error) {
-    console.error('[deleteObjects] Failed to delete objects:', error);
+    logger.error({ err: error }, 'Failed to delete objects');
     return {
       deleted: [],
       errors: keys.map(key => ({
@@ -58,7 +58,7 @@ async function deleteObjects(keys: string[]): Promise<{
 }
 
 export async function handleCleanupJob() {
-  console.log('[CleanupHandler] Starting cleanup task');
+  logger.info('Starting cleanup task');
 
   const now = new Date();
 
@@ -74,7 +74,7 @@ export async function handleCleanupJob() {
     },
   });
 
-  console.log(`[CleanupHandler] Found ${tracksToDelete.length} tracks to cleanup`);
+  logger.info({ count: tracksToDelete.length }, 'Found tracks to cleanup');
 
   for (const track of tracksToDelete) {
     try {
@@ -104,20 +104,20 @@ export async function handleCleanupJob() {
       // 3. 删除 R2 文件
       if (keysToDelete.length > 0) {
         const { deleted, errors } = await deleteObjects(keysToDelete);
-        console.log(`[CleanupHandler] Track ${track.id}: deleted ${deleted.length}/${keysToDelete.length} files`);
+        logger.info({ trackId: track.id, deleted: deleted.length, total: keysToDelete.length }, 'Files deleted');
 
         if (errors.length > 0) {
-          console.error(`[CleanupHandler] Track ${track.id}: failed to delete ${errors.length} files`);
+          logger.error({ trackId: track.id, failedCount: errors.length }, 'Failed to delete some files');
         }
       }
 
       // 4. 物理删除数据库记录（级联删除 variants, jobs, shares, assets）
       await prisma.track.delete({ where: { id: track.id } });
 
-      console.log(`[CleanupHandler] Track ${track.id} cleanup completed`);
+      logger.info({ trackId: track.id }, 'Track cleanup completed');
 
     } catch (error) {
-      console.error(`[CleanupHandler] Failed to cleanup track ${track.id}:`, error);
+      logger.error({ trackId: track.id, err: error }, 'Failed to cleanup track');
       // 继续处理下一个
     }
   }

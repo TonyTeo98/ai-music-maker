@@ -1,20 +1,17 @@
 // 音乐生成任务处理器
 
 import { Job, Queue } from 'bullmq'
-import { PrismaClient } from '@prisma/client'
-import IORedis from 'ioredis'
-import { cqtaiProvider } from '../providers'
-import { WORKER_STEPS } from '@aimm/shared'
+import { cqtaiProvider, sunoProvider, defaultProviderChain, ProviderChain, MusicProvider } from '../providers'
+import { WORKER_STEPS, prisma, createLogger, getRedisConnection } from '@aimm/shared'
 import { langfuseService } from '../services/langfuse'
 
-const prisma = new PrismaClient()
+const logger = createLogger('GenerateHandler')
 
-// 创建 Redis 连接和队列实例用于触发下载任务
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
-const connection = new IORedis(REDIS_URL, {
-  maxRetriesPerRequest: null,
-})
-const mediaQueue = new Queue('media-jobs', { connection })
+// 使用共享 Redis 连接
+const mediaQueue = new Queue('media-jobs', { connection: getRedisConnection() })
+
+// 是否启用 Provider 降级
+const ENABLE_FALLBACK = process.env.PROVIDER_FALLBACK_ENABLED === 'true'
 
 export interface GenerateJobData {
   trackId: string
@@ -113,7 +110,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
   const traceId = jobId // 使用 jobId 作为 trace_id
   const jobStartTime = new Date() // 端到端计时起点
 
-  console.log(`[GenerateHandler] Starting job ${jobId} for track ${trackId}`)
+  logger.info({ jobId, trackId }, 'Starting job')
 
   // 创建 Langfuse trace
   langfuseService.createTrace(traceId, {
@@ -151,12 +148,12 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       orderBy: { batchIndex: 'desc' },
     })
     const newBatchIndex = (lastVariant?.batchIndex || 0) + 1
-    console.log(`[GenerateHandler] New batch index: ${newBatchIndex}`)
+    logger.info({ batchIndex: newBatchIndex }, 'New batch index')
 
     // Step 1: Audio Check (简化版，后续可扩展)
     currentStepStart = new Date()
     await updateJobProgress(jobId, 10, WORKER_STEPS.AUDIO_CHECK)
-    console.log(`[GenerateHandler] Step: ${WORKER_STEPS.AUDIO_CHECK}`)
+    logger.debug({ step: WORKER_STEPS.AUDIO_CHECK }, 'Step started')
 
     stepTimings.push({
       name: WORKER_STEPS.AUDIO_CHECK,
@@ -169,7 +166,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     // Step 2: Compose Params
     currentStepStart = new Date()
     await updateJobProgress(jobId, 20, WORKER_STEPS.COMPOSE_PARAMS)
-    console.log(`[GenerateHandler] Step: ${WORKER_STEPS.COMPOSE_PARAMS}`)
+    logger.debug({ step: WORKER_STEPS.COMPOSE_PARAMS }, 'Step started')
 
     // 构建音频 URL
     const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000'
@@ -204,11 +201,14 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     // Step 3: Submit to Provider
     currentStepStart = new Date()
     await updateJobProgress(jobId, 30, WORKER_STEPS.MUSIC_GENERATE)
-    console.log(`[GenerateHandler] Step: ${WORKER_STEPS.MUSIC_GENERATE}`)
+    logger.debug({ step: WORKER_STEPS.MUSIC_GENERATE }, 'Step started')
 
-    // 3a. 记录提交请求
+    // 3a. 记录提交请求 - 支持 Provider 降级
     const submitStartTime = new Date()
-    const { taskId } = await cqtaiProvider.submitGenerate({
+    let taskId: string
+    let activeProviderName = 'cqtai'
+
+    const generateRequest = {
       audioUrl,
       style,
       segment,
@@ -220,7 +220,19 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       styleWeight,
       weirdnessConstraint,
       audioWeight,
-    })
+    }
+
+    if (ENABLE_FALLBACK) {
+      // 使用 Provider 链（带降级）
+      const result = await defaultProviderChain.submitGenerate(generateRequest)
+      taskId = result.taskId
+      activeProviderName = result.provider
+    } else {
+      // 直接使用 CQTAI
+      const result = await cqtaiProvider.submitGenerate(generateRequest)
+      taskId = result.taskId
+    }
+
     const submitEndTime = new Date()
     const submitDurationMs = submitEndTime.getTime() - submitStartTime.getTime()
     providerSubmitMs = submitDurationMs // 记录到端到端统计
@@ -231,7 +243,8 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       startTime: submitStartTime,
       endTime: submitEndTime,
       input: {
-        provider: 'cqtai',
+        provider: activeProviderName,
+        fallbackEnabled: ENABLE_FALLBACK,
         audioUrl: audioUrl.substring(0, 80) + '...',
         style,
         hasLyrics: !!lyrics,
@@ -243,7 +256,12 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       },
     })
 
-    console.log(`[GenerateHandler] Provider task submitted: ${taskId} (${submitDurationMs}ms)`)
+    logger.info({ taskId, durationMs: submitDurationMs }, 'Provider task submitted')
+
+    // 获取活跃 Provider 实例用于后续查询
+    const activeProvider: MusicProvider = ENABLE_FALLBACK
+      ? (defaultProviderChain.getProvider(activeProviderName) || cqtaiProvider)
+      : cqtaiProvider
 
     // Step 4: Poll for completion
     let attempts = 0
@@ -252,7 +270,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     let lastStatus = 'unknown'
     const statusTransitions: Array<{ status: string; attemptNum: number; timestamp: Date }> = []
 
-    let result = await cqtaiProvider.queryTask(taskId)
+    let result = await activeProvider.queryTask(taskId)
     statusTransitions.push({ status: result.status, attemptNum: 0, timestamp: new Date() })
     lastStatus = result.status
 
@@ -284,12 +302,12 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
 
       // 等待 5 秒后重试
       await new Promise((resolve) => setTimeout(resolve, 5000))
-      result = await cqtaiProvider.queryTask(taskId)
+      result = await activeProvider.queryTask(taskId)
 
       // 记录状态转换
       if (result.status !== lastStatus) {
         statusTransitions.push({ status: result.status, attemptNum: attempts, timestamp: new Date() })
-        console.log(`[GenerateHandler] Poll #${attempts}: status ${lastStatus} → ${result.status}`)
+        logger.debug({ attempt: attempts, from: lastStatus, to: result.status }, 'Poll status change')
         lastStatus = result.status
       }
     }
@@ -316,7 +334,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
       },
     })
 
-    console.log(`[GenerateHandler] Polling completed: ${attempts + 1} attempts, ${pollDurationMs}ms`)
+    logger.info({ attempts: attempts + 1, durationMs: pollDurationMs }, 'Polling completed')
 
     if (result.status === 'failed') {
       throw new Error(result.error || 'GEN_PROVIDER_ERROR')
@@ -339,7 +357,7 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     // Step 5: A/B Eval & Save Results
     currentStepStart = new Date()
     await updateJobProgress(jobId, 90, WORKER_STEPS.AB_EVAL)
-    console.log(`[GenerateHandler] Step: ${WORKER_STEPS.AB_EVAL}`)
+    logger.debug({ step: WORKER_STEPS.AB_EVAL }, 'Step started')
 
     // 保存变体到数据库
     if (result.variants) {
@@ -379,9 +397,9 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
             removeOnComplete: 100,
             removeOnFail: 500,
           })
-          console.log(`[GenerateHandler] Download job queued for variant ${createdVariant.id}`)
+          logger.info({ variantId: createdVariant.id }, 'Download job queued')
         } catch (error) {
-          console.error(`[GenerateHandler] Failed to queue download job:`, error)
+          logger.error({ err: error }, 'Failed to queue download job')
           // 不阻塞生成流程，继续执行
         }
       }
@@ -449,11 +467,11 @@ export async function handleGenerateJob(job: Job<GenerateJobData>) {
     // 确保数据发送到 Langfuse
     await langfuseService.flush()
 
-    console.log(`[GenerateHandler] Job ${jobId} completed successfully (${totalDurationMs}ms total, ${providerPollMs}ms polling)`)
+    logger.info({ jobId, totalMs: totalDurationMs, pollMs: providerPollMs }, 'Job completed successfully')
     return { success: true, taskId }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-    console.error(`[GenerateHandler] Job ${jobId} failed:`, errorMsg)
+    logger.error({ jobId, err: errorMsg }, 'Job failed')
 
     // 计算失败时的端到端耗时
     const jobEndTime = new Date()

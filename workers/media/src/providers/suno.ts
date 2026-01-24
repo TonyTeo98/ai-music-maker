@@ -2,7 +2,9 @@
 // 文档参考: https://docs.suno.ai (需要实际 API 文档)
 
 import { MusicProvider, GenerateRequest, GenerateResult } from './types'
+import { createLogger } from '@aimm/shared'
 
+const logger = createLogger('SunoProvider')
 const SUNO_API_BASE = process.env.SUNO_API_BASE_URL || 'https://api.suno.ai'
 const SUNO_API_KEY = process.env.SUNO_API_KEY || ''
 
@@ -47,7 +49,7 @@ export class SunoProvider implements MusicProvider {
   async submitGenerate(request: GenerateRequest): Promise<{ taskId: string }> {
     // 开发模式：如果没有 API Key，使用 mock
     if (!SUNO_API_KEY) {
-      console.log('[SunoProvider] No API key, using mock mode')
+      logger.warn('No API key, using mock mode')
       return { taskId: `mock_${Date.now()}` }
     }
 
