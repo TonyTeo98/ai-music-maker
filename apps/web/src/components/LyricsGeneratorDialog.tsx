@@ -62,11 +62,12 @@ export default function LyricsGeneratorDialog({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">✨ AI 生成歌词</h3>
+          <h3 className="text-lg font-semibold text-neutral-900">✨ AI 生成歌词</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-neutral-400 hover:text-neutral-600 transition-colors"
             disabled={isGenerating}
+            aria-label="关闭对话框"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -80,26 +81,27 @@ export default function LyricsGeneratorDialog({
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="lyrics-prompt" className="block text-sm font-medium text-neutral-700 mb-2">
             歌曲主题
           </label>
           <textarea
+            id="lyrics-prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="例如：关于友情和冒险的快乐歌曲"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+            className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
             disabled={isGenerating}
             autoFocus
           />
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-neutral-400">
             描述你想要的歌曲主题、情感或故事
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          <div className="mb-4 p-3 bg-error-50 border border-error-200 rounded-lg text-sm text-error-600">
             {error}
           </div>
         )}
@@ -108,14 +110,14 @@ export default function LyricsGeneratorDialog({
           <button
             onClick={onClose}
             disabled={isGenerating}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             取消
           </button>
           <button
             onClick={handleGenerate}
             disabled={isGenerating || !prompt.trim()}
-            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-neutral-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isGenerating ? (
               <>
@@ -146,7 +148,7 @@ export default function LyricsGeneratorDialog({
           </button>
         </div>
 
-        <p className="mt-3 text-xs text-gray-400 text-center">
+        <p className="mt-3 text-xs text-neutral-400 text-center">
           提示：按 Cmd/Ctrl + Enter 快速生成
         </p>
       </div>

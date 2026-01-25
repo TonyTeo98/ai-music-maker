@@ -45,11 +45,18 @@ export function AudioWaveform({
 
     const regions = RegionsPlugin.create()
 
+    // 从 CSS 变量读取颜色
+    const computedStyle = getComputedStyle(document.documentElement)
+    const waveColor = computedStyle.getPropertyValue('--waveform-wave').trim() || '#d1d5db'
+    const progressColor = computedStyle.getPropertyValue('--waveform-progress').trim() || '#9333ea'
+    const cursorColor = computedStyle.getPropertyValue('--waveform-cursor').trim() || '#9333ea'
+    const regionColor = computedStyle.getPropertyValue('--waveform-region').trim() || 'rgba(147, 51, 234, 0.2)'
+
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: '#d1d5db',
-      progressColor: '#6366f1',
-      cursorColor: '#4f46e5',
+      waveColor,
+      progressColor,
+      cursorColor,
       cursorWidth: 2,
       height: 80,
       barWidth: 2,
@@ -71,7 +78,7 @@ export function AudioWaveform({
       const region = regions.addRegion({
         start: 0,
         end: defaultEnd,
-        color: 'rgba(99, 102, 241, 0.2)',
+        color: regionColor,
         drag: true,
         resize: true,
       })
@@ -145,14 +152,14 @@ export function AudioWaveform({
       {/* Waveform Container */}
       <div
         ref={containerRef}
-        className="w-full bg-gray-50 rounded-lg overflow-hidden"
+        className="w-full h-20 min-h-[80px] bg-neutral-50 rounded-lg overflow-hidden"
       />
 
       {/* Loading State */}
       {!isReady && (
-        <div className="flex items-center justify-center h-20 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-center h-20 bg-neutral-50 rounded-lg">
           <div className="w-6 h-6 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-          <span className="ml-2 text-sm text-gray-500">加载音频...</span>
+          <span className="ml-2 text-sm text-neutral-500">加载音频...</span>
         </div>
       )}
 
@@ -160,7 +167,7 @@ export function AudioWaveform({
       {isReady && (
         <div className="mt-3 space-y-3">
           {/* Time Display */}
-          <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center justify-between text-sm text-neutral-600">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
@@ -181,7 +188,7 @@ export function AudioWaveform({
           <div className="flex gap-2">
             <button
               onClick={togglePlay}
-              className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2 px-4 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {isPlaying ? (
                 <>
@@ -212,7 +219,7 @@ export function AudioWaveform({
           </div>
 
           {/* Help Text */}
-          <p className="text-xs text-gray-400 text-center">
+          <p className="text-xs text-neutral-400 text-center">
             拖拽波形上的蓝色区域调整片段范围（推荐 {minDuration}-{maxDuration} 秒）
           </p>
         </div>

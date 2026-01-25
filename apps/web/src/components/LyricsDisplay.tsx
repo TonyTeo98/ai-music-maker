@@ -23,9 +23,9 @@ export function LyricsDisplay({ lyrics, className = '', maxHeight = '400px' }: L
   const displayLines = needsCollapse && !isExpanded ? lines.slice(0, 15) : lines
 
   return (
-    <div className={`bg-gray-50 rounded-lg p-4 ${className}`}>
+    <div className={`bg-neutral-50 rounded-lg p-4 ${className}`}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-700">歌词</h3>
+        <h3 className="text-sm font-medium text-neutral-700">歌词</h3>
         {needsCollapse && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -37,7 +37,7 @@ export function LyricsDisplay({ lyrics, className = '', maxHeight = '400px' }: L
       </div>
 
       <div
-        className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap overflow-y-auto"
+        className="text-sm text-neutral-600 leading-relaxed whitespace-pre-wrap overflow-y-auto"
         style={{ maxHeight: isExpanded ? 'none' : maxHeight }}
       >
         {displayLines.map((line, index) => {
@@ -50,7 +50,7 @@ export function LyricsDisplay({ lyrics, className = '', maxHeight = '400px' }: L
               className={`${
                 isSectionMarker
                   ? 'font-semibold text-primary-600 mt-4 first:mt-0'
-                  : 'text-gray-700'
+                  : 'text-neutral-700'
               }`}
             >
               {line}

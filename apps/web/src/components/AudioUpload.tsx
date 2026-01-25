@@ -116,10 +116,10 @@ export function AudioUpload({ onUploadComplete, className = '' }: AudioUploadPro
           htmlFor="audio-upload"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-gray-50 transition-colors"
+          className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-neutral-50 transition-colors"
         >
           <svg
-            className="w-12 h-12 text-gray-400 mb-3"
+            className="w-12 h-12 text-neutral-400 mb-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -131,30 +131,30 @@ export function AudioUpload({ onUploadComplete, className = '' }: AudioUploadPro
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
             />
           </svg>
-          <p className="text-sm text-gray-600">点击或拖拽上传音频文件</p>
-          <p className="text-xs text-gray-400 mt-1">支持 MP3、WAV、WebM 等格式</p>
+          <p className="text-sm text-neutral-600">点击或拖拽上传音频文件</p>
+          <p className="text-xs text-neutral-400 mt-1">支持 MP3、WAV、WebM 等格式</p>
         </label>
       )}
 
       {status === 'uploading' && (
         <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-primary-300 rounded-lg bg-primary-50">
-          <p className="text-sm text-gray-600 mb-3">{fileName}</p>
-          <div className="w-3/4 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <p className="text-sm text-neutral-600 mb-3">{fileName}</p>
+          <div className="w-3/4 h-2 bg-neutral-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-primary-600 transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-full bg-primary-600 transition-transform duration-300 origin-left"
+              style={{ transform: `scaleX(${progress / 100})` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-2">上传中 {progress}%</p>
+          <p className="text-xs text-neutral-500 mt-2">上传中 {progress}%</p>
         </div>
       )}
 
       {status === 'success' && (
-        <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-green-300 rounded-lg bg-green-50">
-          <svg className="w-12 h-12 text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-success-300 rounded-lg bg-success-50">
+          <svg className="w-12 h-12 text-success-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          <p className="text-sm text-green-600">{fileName} 上传成功</p>
+          <p className="text-sm text-success-600">{fileName} 上传成功</p>
           <button
             onClick={reset}
             className="mt-3 text-sm text-primary-600 hover:underline"
@@ -165,11 +165,11 @@ export function AudioUpload({ onUploadComplete, className = '' }: AudioUploadPro
       )}
 
       {status === 'error' && (
-        <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-red-300 rounded-lg bg-red-50">
-          <svg className="w-12 h-12 text-red-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-error-300 rounded-lg bg-error-50">
+          <svg className="w-12 h-12 text-error-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm text-error-600">{error}</p>
           <button
             onClick={reset}
             className="mt-3 text-sm text-primary-600 hover:underline"

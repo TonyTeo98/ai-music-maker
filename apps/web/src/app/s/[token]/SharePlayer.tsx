@@ -87,7 +87,7 @@ export function SharePlayer({ audioUrl, duration, imageUrl, imageLargeUrl }: Sha
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black" />
+          <div className="absolute inset-0 bg-gradient-to-b from-neutral-900 via-neutral-800 to-black" />
         )}
       </div>
 
@@ -110,6 +110,8 @@ export function SharePlayer({ audioUrl, duration, imageUrl, imageLargeUrl }: Sha
         <button
           onClick={toggle}
           disabled={!isLoaded}
+          aria-label={isPlaying ? '暂停' : '播放'}
+          aria-pressed={isPlaying}
           className="w-24 h-24 md:w-24 md:h-24 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-primary-500 text-white hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:scale-105"
         >
           {isPlaying ? (
@@ -126,12 +128,27 @@ export function SharePlayer({ audioUrl, duration, imageUrl, imageLargeUrl }: Sha
         {/* Progress bar */}
         <div className="w-full max-w-md space-y-2">
           <div
-            className="h-2 bg-white/20 rounded-full overflow-hidden cursor-pointer backdrop-blur-sm"
+            role="slider"
+            tabIndex={0}
+            aria-label="播放进度"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress)}
+            className="h-2 bg-white/20 rounded-full overflow-hidden cursor-pointer backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             onClick={handleSeek}
+            onKeyDown={(e) => {
+              const audio = audioRef.current
+              if (!audio || duration <= 0) return
+              if (e.key === 'ArrowRight') {
+                audio.currentTime = Math.min(duration, audio.currentTime + 5)
+              } else if (e.key === 'ArrowLeft') {
+                audio.currentTime = Math.max(0, audio.currentTime - 5)
+              }
+            }}
           >
             <div
-              className="h-full bg-primary-500 transition-all duration-100"
-              style={{ width: `${progress}%` }}
+              className="h-full bg-primary-500 transition-transform duration-100 origin-left"
+              style={{ transform: `scaleX(${progress / 100})` }}
             />
           </div>
 

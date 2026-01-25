@@ -66,7 +66,7 @@ export function DeviceItem({ device, isSelected, onSelect }: DeviceItemProps) {
             </span>
           )}
           {device.isBluetooth && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-accent-100 text-accent-700">
               蓝牙
             </span>
           )}

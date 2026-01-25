@@ -20,11 +20,12 @@ function SoundWaveVisualizer({ isActive }: { isActive: boolean }) {
       {[...Array(7)].map((_, i) => (
         <div
           key={i}
-          className={`w-1 rounded-full transition-all duration-300 ${
+          className={`w-1 rounded-full transition-transform duration-300 origin-bottom ${
             isActive ? 'bg-white animate-pulse' : 'bg-white/40'
           }`}
           style={{
-            height: isActive ? `${30 + Math.sin(i * 0.8) * 20}%` : '20%',
+            height: '100%',
+            transform: isActive ? `scaleY(${0.3 + Math.sin(i * 0.8) * 0.5})` : 'scaleY(0.2)',
             animationDelay: `${i * 0.1}s`,
           }}
         />
@@ -353,6 +354,7 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
           <button
             onClick={startRecording}
             className="group relative w-20 h-20 md:w-24 md:h-24"
+            aria-label="开始录音"
           >
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 shadow-glow-primary group-hover:scale-105 group-active:scale-95 transition-transform" />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -385,8 +387,8 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
       {status === 'recording' && (
         <div className="flex flex-col items-center justify-center py-12 px-6 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 animate-fade-in">
           {isBluetoothDevice && (
-            <div className="mb-4 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
-              <p className="text-yellow-100 text-sm text-center">
+            <div className="mb-4 px-4 py-2 bg-warning-500/20 border border-warning-500/30 rounded-lg">
+              <p className="text-warning-100 text-sm text-center">
                 ⚠️ 使用蓝牙设备，如无声音请切换到内置麦克风
               </p>
             </div>
@@ -405,6 +407,7 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
           <button
             onClick={stopRecording}
             className="group w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all active:scale-95"
+            aria-label="停止录音"
           >
             <span className="w-6 h-6 bg-white rounded-sm" />
           </button>
@@ -456,7 +459,7 @@ export function AudioRecorder({ onComplete, className = '' }: AudioRecorderProps
 
           <div className="w-full max-w-xs">
             <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${uploadProgress}%` }} />
+              <div className="progress-bar-fill origin-left" style={{ transform: `scaleX(${uploadProgress / 100})` }} />
             </div>
             <p className="text-sm text-neutral-400 text-center mt-2">{uploadProgress}%</p>
           </div>
