@@ -94,7 +94,7 @@ export default function LibraryPage() {
 
   if (deviceLoading) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen bg-white p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
@@ -105,16 +105,16 @@ export default function LibraryPage() {
   }
 
   return (
-    <main className="min-h-screen p-4 md:p-8">
+    <main className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">我的作品</h1>
-            <p className="text-gray-600 mt-1 text-sm md:text-base">共 {tracks.length} 首作品</p>
+            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">我的作品</h1>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">共 {tracks.length} 首作品</p>
           </div>
           <a
             href="/create"
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-center"
+            className="px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors text-center font-medium"
           >
             创建新作品
           </a>
@@ -125,16 +125,16 @@ export default function LibraryPage() {
             <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
             {error}
             <button onClick={loadTracks} className="ml-2 underline">
               重试
             </button>
           </div>
         ) : tracks.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
+          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
             <svg
-              className="w-16 h-16 text-gray-300 mx-auto mb-4"
+              className="w-16 h-16 text-slate-300 mx-auto mb-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -146,10 +146,10 @@ export default function LibraryPage() {
                 d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
               />
             </svg>
-            <p className="text-gray-500 mb-4">还没有作品</p>
+            <p className="text-slate-500 mb-4">还没有作品</p>
             <a
               href="/create"
-              className="inline-block px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="inline-block px-6 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium"
             >
               创建第一首
             </a>
@@ -160,7 +160,7 @@ export default function LibraryPage() {
               <a
                 key={track.id}
                 href={`/tracks/${track.id}`}
-                className="group bg-neutral-800 rounded-xl overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all block"
+                className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-primary-300 hover:shadow-soft-md transition-all block"
               >
                 {/* Cover Image with Play Overlay */}
                 <div className="relative aspect-square">
@@ -172,17 +172,17 @@ export default function LibraryPage() {
                     className="w-full h-full rounded-none"
                   />
                   {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button
                       onClick={(e) => {
                         e.preventDefault()
                         handlePlay(track.id, track.audioUrl)
                       }}
                       disabled={!track.audioUrl}
-                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
+                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
                         track.audioUrl
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-slate-400 text-slate-200 cursor-not-allowed'
                       }`}
                     >
                       {playingId === track.id ? (
@@ -198,7 +198,7 @@ export default function LibraryPage() {
                   </div>
                   {/* Status Badge */}
                   {track.status === 'generating' && (
-                    <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500/90 text-white text-xs rounded-full">
+                    <div className="absolute top-2 right-2 px-2 py-1 bg-amber-500/90 text-white text-xs rounded-full">
                       生成中...
                     </div>
                   )}
@@ -215,10 +215,10 @@ export default function LibraryPage() {
 
                 {/* Track Info */}
                 <div className="p-3">
-                  <h3 className="font-medium truncate text-sm text-white">
+                  <h3 className="font-medium truncate text-sm text-slate-900">
                     {track.title || '未命名作品'}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                     {track.style && (
                       <span className="truncate">{track.style}</span>
                     )}
@@ -232,7 +232,7 @@ export default function LibraryPage() {
         )}
 
         <div className="mt-8">
-          <a href="/" className="text-sm text-gray-500 hover:text-gray-700">
+          <a href="/" className="text-sm text-slate-500 hover:text-slate-700">
             ← 返回首页
           </a>
         </div>

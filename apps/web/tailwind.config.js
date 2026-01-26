@@ -6,19 +6,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary - Deep Violet (creative, premium)
+        // Primary - Neutral Blue (clean, professional, Linear style)
         primary: {
-          50: '#faf5ff',
-          100: '#f3e8ff',
-          200: '#e9d5ff',
-          300: '#d8b4fe',
-          400: '#c084fc',
-          500: '#a855f7',
-          600: '#9333ea',
-          700: '#7c3aed',
-          800: '#6d28d9',
-          900: '#5b21b6',
-          950: '#3b0764',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+          950: '#172554',
         },
         // Accent - Warm Amber (energy, music warmth)
         accent: {
@@ -139,17 +139,17 @@ module.exports = {
         'soft-md': '0 6px 12px -2px rgb(0 0 0 / 0.06), 0 3px 6px -3px rgb(0 0 0 / 0.06)',
         'soft-lg': '0 10px 25px -5px rgb(0 0 0 / 0.08), 0 4px 10px -6px rgb(0 0 0 / 0.06)',
         'soft-xl': '0 20px 40px -10px rgb(0 0 0 / 0.1)',
-        // Glow effects for interactive elements
-        'glow-primary': '0 0 20px -5px rgb(147 51 234 / 0.3)',
-        'glow-accent': '0 0 20px -5px rgb(245 158 11 / 0.3)',
+        // Glow effects (subtle, not distracting)
+        'glow-primary': '0 0 15px -5px rgb(37 99 235 / 0.2)',
+        'glow-accent': '0 0 15px -5px rgb(245 158 11 / 0.2)',
         // Inner shadows
         'inner-soft': 'inset 0 1px 2px 0 rgb(0 0 0 / 0.05)',
       },
       backgroundImage: {
-        // Subtle gradients (avoiding typical AI gradients)
-        'gradient-warm': 'linear-gradient(135deg, #faf5ff 0%, #fff7ed 100%)',
-        'gradient-surface': 'linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)',
-        'gradient-primary': 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)',
+        // Clean gradients (minimalist style)
+        'gradient-warm': 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+        'gradient-surface': 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
         'gradient-accent': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
         // Noise texture overlay
         'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E\")",

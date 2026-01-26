@@ -273,24 +273,24 @@ export default function CreatePage() {
   }
 
   return (
-    <main className="min-h-screen p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">创建音乐</h1>
-        <p className="text-gray-600 mb-6 md:mb-8 text-sm md:text-base">录制或上传你的哼唱/清唱音频，AI 将帮你生成音乐</p>
+    <main className="min-h-screen bg-white p-4 md:p-8">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-2">创建音乐</h1>
+        <p className="text-slate-500 mb-8 text-sm md:text-base">录制或上传你的哼唱/清唱音频，AI 将帮你生成音乐</p>
 
         {/* Step 1: Audio Input (Record or Upload) */}
         {step === 'upload' && (
-          <div className="bg-white rounded-xl shadow-sm border p-4 md:p-6">
-            <h2 className="text-lg font-medium mb-4">第一步：录音或上传</h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
+            <h2 className="text-lg font-medium text-slate-900 mb-4">第一步：录音或上传</h2>
             <AudioInput onComplete={handleUploadComplete} />
           </div>
         )}
 
         {/* Step 2: Segment Selection */}
         {step === 'segment' && audioUrl && (
-          <div className="bg-white rounded-xl shadow-sm border p-4 md:p-6">
-            <h2 className="text-lg font-medium mb-2">第二步：选择重点片段</h2>
-            <p className="text-sm text-gray-500 mb-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
+            <h2 className="text-lg font-medium text-slate-900 mb-2">第二步：选择重点片段</h2>
+            <p className="text-sm text-slate-500 mb-4">
               选择音频中最精彩的部分（推荐 10-30 秒），AI 将重点参考这段内容
             </p>
 
@@ -304,13 +304,13 @@ export default function CreatePage() {
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleConfirmSegment}
-                className="flex-1 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                className="flex-1 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium"
               >
                 确认选择
               </button>
               <button
                 onClick={handleSkipSegment}
-                className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
               >
                 跳过，使用全部音频
               </button>
@@ -318,7 +318,7 @@ export default function CreatePage() {
 
             <button
               onClick={reset}
-              className="w-full mt-3 py-2 text-gray-500 hover:text-gray-700 text-sm"
+              className="w-full mt-3 py-2 text-slate-500 hover:text-slate-700 text-sm"
             >
               重新上传
             </button>
@@ -327,18 +327,18 @@ export default function CreatePage() {
 
         {/* Step 3: Style Selection */}
         {step === 'style' && (
-          <div className="bg-white rounded-xl shadow-sm border p-4 md:p-6">
-            <h2 className="text-lg font-medium mb-4">第三步：选择风格</h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
+            <h2 className="text-lg font-medium text-slate-900 mb-4">第三步：选择风格</h2>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
                 {error}
               </div>
             )}
 
             {/* 片段信息 */}
             {segment && !skipSegment && (
-              <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-xl text-sm">
                 <span className="text-primary-700">
                   已选片段: {Math.floor(segment.startMs / 1000)}s - {Math.floor(segment.endMs / 1000)}s
                 </span>
@@ -353,7 +353,7 @@ export default function CreatePage() {
 
             {/* 风格选择 */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 音乐风格 <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
@@ -361,10 +361,10 @@ export default function CreatePage() {
                   <button
                     key={s.value}
                     onClick={() => setStyle(s.value)}
-                    className={`p-2 text-sm rounded-lg border-2 transition-colors ${
+                    className={`p-2 text-sm rounded-xl border-2 transition-colors ${
                       style === s.value
                         ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300'
+                        : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     {s.label}
@@ -372,10 +372,10 @@ export default function CreatePage() {
                 ))}
                 <button
                   onClick={() => setStyle('custom')}
-                  className={`p-2 text-sm rounded-lg border-2 transition-colors ${
+                  className={`p-2 text-sm rounded-xl border-2 transition-colors ${
                     style === 'custom'
                       ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   自定义
@@ -387,7 +387,7 @@ export default function CreatePage() {
                   value={customStyle}
                   onChange={(e) => setCustomStyle(e.target.value)}
                   placeholder="输入自定义风格，如：轻快的夏日海滩风"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               )}
             </div>
@@ -395,8 +395,8 @@ export default function CreatePage() {
             {/* 歌词/主题（可选） */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  歌词/主题 <span className="text-gray-400 font-normal">（可选）</span>
+                <label className="block text-sm font-medium text-slate-700">
+                  歌词/主题 <span className="text-slate-400 font-normal">（可选）</span>
                 </label>
                 <button
                   onClick={() => setShowLyricsDialog(true)}
@@ -418,9 +418,9 @@ export default function CreatePage() {
                 onChange={(e) => setLyrics(e.target.value)}
                 placeholder="输入歌词、主题或想要表达的内容..."
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
               />
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-slate-400">
                 可以输入完整歌词，或简单描述想要的主题
               </p>
             </div>
@@ -436,14 +436,14 @@ export default function CreatePage() {
             <button
               onClick={handleStartGenerate}
               disabled={style === 'custom' && !customStyle.trim()}
-              className="w-full py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               开始生成
             </button>
 
             <button
               onClick={reset}
-              className="w-full mt-3 py-2 text-gray-500 hover:text-gray-700 text-sm"
+              className="w-full mt-3 py-2 text-slate-500 hover:text-slate-700 text-sm"
             >
               重新上传
             </button>
@@ -452,14 +452,14 @@ export default function CreatePage() {
 
         {/* Step 4: Generating */}
         {step === 'generating' && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-medium mb-4">正在生成...</h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-lg font-medium text-slate-900 mb-4">正在生成...</h2>
 
             <div className="flex flex-col items-center py-8">
               <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4" />
 
               <div className="w-full max-w-xs mb-2">
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-primary-600 transition-all duration-500"
                     style={{ width: `${progress}%` }}
@@ -467,15 +467,15 @@ export default function CreatePage() {
                 </div>
               </div>
 
-              <p className="text-sm text-gray-500">{progress}%</p>
+              <p className="text-sm text-slate-500">{progress}%</p>
               {currentStep && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   当前步骤: {currentStep}
                 </p>
               )}
             </div>
 
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-slate-500">
               生成过程可能需要几分钟，请耐心等待
             </p>
           </div>
@@ -483,9 +483,9 @@ export default function CreatePage() {
 
         {/* Step 5: Result with A/B Player */}
         {step === 'result' && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-lg font-medium mb-2">生成完成</h2>
-            <p className="text-sm text-gray-500 mb-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-lg font-medium text-slate-900 mb-2">生成完成</h2>
+            <p className="text-sm text-slate-500 mb-4">
               试听两个版本，选择你喜欢的作为主版本
             </p>
 
@@ -502,22 +502,22 @@ export default function CreatePage() {
               </div>
             )}
 
-            <div className="mt-6 pt-4 border-t">
+            <div className="mt-6 pt-4 border-t border-slate-200">
               {primaryVariantId ? (
                 <div className="space-y-3">
                   {shareUrl ? (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
                       <p className="text-sm text-green-700 mb-2">分享链接已生成：</p>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={shareUrl}
                           readOnly
-                          className="flex-1 px-3 py-2 text-sm bg-white border rounded-lg"
+                          className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl"
                         />
                         <button
                           onClick={() => navigator.clipboard.writeText(shareUrl)}
-                          className="px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                          className="px-3 py-2 text-sm bg-primary-600 text-white rounded-xl hover:bg-primary-700"
                         >
                           复制
                         </button>
@@ -526,7 +526,7 @@ export default function CreatePage() {
                   ) : (
                     <button
                       onClick={handleShare}
-                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                      className="w-full py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
                     >
                       生成分享链接
                     </button>
@@ -534,13 +534,13 @@ export default function CreatePage() {
                   <div className="flex gap-3">
                     <button
                       onClick={handleRegenerate}
-                      className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                      className="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
                     >
                       再来一组
                     </button>
                     <button
                       onClick={reset}
-                      className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                      className="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
                     >
                       创建新作品
                     </button>
@@ -548,19 +548,19 @@ export default function CreatePage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-400 text-center">
+                  <p className="text-sm text-slate-400 text-center">
                     请选择一个版本作为主版本
                   </p>
                   <div className="flex gap-3">
                     <button
                       onClick={handleShare}
-                      className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                      className="flex-1 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
                     >
                       分享
                     </button>
                     <button
                       onClick={handleRegenerate}
-                      className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                      className="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium"
                     >
                       再来一组
                     </button>
@@ -583,7 +583,7 @@ export default function CreatePage() {
         )}
 
         <div className="mt-6">
-          <a href="/" className="text-sm text-gray-500 hover:text-gray-700">
+          <a href="/" className="text-sm text-slate-500 hover:text-slate-700">
             ← 返回首页
           </a>
         </div>
@@ -593,8 +593,8 @@ export default function CreatePage() {
       {showSelectModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
-            <h3 className="text-lg font-medium mb-2">请先选择主版本</h3>
-            <p className="text-gray-600 text-sm mb-4">
+            <h3 className="text-lg font-medium text-slate-900 mb-2">请先选择主版本</h3>
+            <p className="text-slate-600 text-sm mb-4">
               分享前需要选择一个版本作为主版本
             </p>
             <div className="space-y-2">
@@ -602,14 +602,14 @@ export default function CreatePage() {
                 <button
                   key={v.id}
                   onClick={() => handleQuickSelectAndShare(v.id)}
-                  className="w-full py-3 border border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-500 transition-colors font-medium"
+                  className="w-full py-3 border border-slate-200 rounded-xl hover:bg-primary-50 hover:border-primary-500 transition-colors font-medium"
                 >
                   选择版本 {v.variant} 并分享
                 </button>
               ))}
               <button
                 onClick={() => setShowSelectModal(false)}
-                className="w-full py-2 text-gray-500 hover:text-gray-700 text-sm"
+                className="w-full py-2 text-slate-500 hover:text-slate-700 text-sm"
               >
                 取消
               </button>
