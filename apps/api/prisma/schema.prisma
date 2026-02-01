@@ -10,6 +10,71 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ===== 用户/认证 =====
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  nickname      String?
+  avatar        String?
+  bio           String?
+  emailVerified Boolean  @default(false)
+  tokenVersion  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  identities    Identity[]
+  refreshTokens RefreshToken[]
+  tracks        Track[]
+}
+
+model Identity {
+  id               String           @id @default(cuid())
+  provider         IdentityProvider
+  providerId       String
+  passwordHash     String?
+  failedLoginCount Int              @default(0)
+  lockedUntil      DateTime?
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerId])
+}
+
+enum IdentityProvider {
+  email
+  google
+  wechat
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  deviceInfo String?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  revokedAt  DateTime?
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
 // ===== 设备/匿名用户 =====
 model Device {
   id        String   @id @default(cuid())
@@ -34,6 +99,8 @@ model Track {
   // 关联
   deviceId  String
   device    Device      @relation(fields: [deviceId], references: [id])
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
 
   // 状态: draft -> generating -> ready -> failed -> deleted
   status    TrackStatus @default(draft)
