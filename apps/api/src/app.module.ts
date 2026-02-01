@@ -11,6 +11,8 @@ import { JobsModule } from './jobs/jobs.module';
 import { SharesModule } from './shares/shares.module';
 import { LangfuseModule } from './langfuse/langfuse.module';
 import { LyricsModule } from './lyrics/lyrics.module';
+import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { LyricsModule } from './lyrics/lyrics.module';
     SharesModule,
     LangfuseModule,
     LyricsModule,
+    AuthModule,
+    EmailModule,
   ],
   controllers: [HealthController],
   providers: [

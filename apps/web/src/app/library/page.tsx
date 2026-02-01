@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useDeviceId } from '@/hooks/useDeviceId'
 import { listTracks } from '@/lib/api'
 import { CoverImage } from '@/components/CoverImage'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 interface Track {
   id: string
@@ -94,10 +96,16 @@ export default function LibraryPage() {
 
   if (deviceLoading) {
     return (
-      <main className="min-h-screen bg-white p-8">
-        <div className="max-w-4xl mx-auto">
+      <main className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)' }}>
+        <div className="max-w-6xl mx-auto p-4 md:p-8">
           <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+            <div
+              className="w-10 h-10 rounded-full animate-spin"
+              style={{
+                border: '3px solid var(--bg-elevated)',
+                borderTopColor: 'var(--accent-primary)',
+              }}
+            />
           </div>
         </div>
       </main>
@@ -105,36 +113,81 @@ export default function LibraryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)' }}>
+      {/* Header */}
+      <header className="flex justify-between items-center p-4 md:p-6">
+        <Link href="/" className="flex items-center gap-2 group">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105"
+            style={{
+              background: 'linear-gradient(135deg, var(--accent-primary) 0%, #9333EA 100%)',
+              boxShadow: 'var(--shadow-glow-primary)',
+            }}
+          >
+            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+            </svg>
+          </div>
+        </Link>
+        <ThemeToggle />
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 pb-12">
+        {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">我的作品</h1>
-            <p className="text-slate-500 mt-1 text-sm md:text-base">共 {tracks.length} 首作品</p>
+            <h1
+              className="text-2xl md:text-3xl font-bold"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              我的作品
+            </h1>
+            <p className="mt-1 text-sm md:text-base" style={{ color: 'var(--text-muted)' }}>
+              共 {tracks.length} 首作品
+            </p>
           </div>
-          <a
+          <Link
             href="/create"
-            className="px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors text-center font-medium"
+            className="px-6 py-3 rounded-xl font-medium text-white transition-all hover:-translate-y-1"
+            style={{
+              background: 'linear-gradient(135deg, var(--accent-primary) 0%, #9333EA 100%)',
+              boxShadow: 'var(--shadow-glow-primary)',
+            }}
           >
             创建新作品
-          </a>
+          </Link>
         </div>
 
+        {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+            <div
+              className="w-10 h-10 rounded-full animate-spin"
+              style={{
+                border: '3px solid var(--bg-elevated)',
+                borderTopColor: 'var(--accent-primary)',
+              }}
+            />
           </div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
+          <div
+            className="rounded-xl p-4"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: 'var(--color-error)',
+            }}
+          >
             {error}
             <button onClick={loadTracks} className="ml-2 underline">
               重试
             </button>
           </div>
         ) : tracks.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <div className="card-glass p-12 text-center">
             <svg
-              className="w-16 h-16 text-slate-300 mx-auto mb-4"
+              className="w-16 h-16 mx-auto mb-4"
+              style={{ color: 'var(--text-subtle)' }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -146,65 +199,83 @@ export default function LibraryPage() {
                 d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
               />
             </svg>
-            <p className="text-slate-500 mb-4">还没有作品</p>
-            <a
+            <p className="mb-4" style={{ color: 'var(--text-muted)' }}>
+              还没有作品
+            </p>
+            <Link
               href="/create"
-              className="inline-block px-6 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium"
+              className="inline-block px-6 py-3 rounded-xl font-medium text-white"
+              style={{
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, #9333EA 100%)',
+              }}
             >
               创建第一首
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {tracks.map((track) => (
-              <a
+              <Link
                 key={track.id}
                 href={`/tracks/${track.id}`}
-                className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-primary-300 hover:shadow-soft-md transition-all block"
+                className="group card-glass overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                style={{
+                  '--hover-glow': 'var(--shadow-glow-primary)',
+                } as React.CSSProperties}
               >
-                {/* Cover Image with Play Overlay */}
-                <div className="relative aspect-square">
+                {/* Cover Image */}
+                <div className="relative aspect-square overflow-hidden">
                   <CoverImage
                     imageUrl={track.imageUrl}
                     imageLargeUrl={track.imageLargeUrl}
                     alt={track.title || '未命名作品'}
                     size="large"
-                    className="w-full h-full rounded-none"
+                    className="w-full h-full rounded-none transition-transform duration-300 group-hover:scale-105"
                   />
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+
+                  {/* Play Overlay */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
+                  >
                     <button
                       onClick={(e) => {
                         e.preventDefault()
                         handlePlay(track.id, track.audioUrl)
                       }}
                       disabled={!track.audioUrl}
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
-                        track.audioUrl
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-slate-400 text-slate-200 cursor-not-allowed'
-                      }`}
+                      className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-110 disabled:opacity-50"
+                      style={{
+                        background: track.audioUrl
+                          ? 'linear-gradient(135deg, var(--accent-primary) 0%, #9333EA 100%)'
+                          : 'var(--bg-elevated)',
+                        boxShadow: track.audioUrl ? 'var(--shadow-glow-primary)' : 'none',
+                      }}
                     >
                       {playingId === track.id ? (
-                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                         </svg>
                       ) : (
-                        <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       )}
                     </button>
                   </div>
+
                   {/* Status Badge */}
                   {track.status === 'generating' && (
-                    <div className="absolute top-2 right-2 px-2 py-1 bg-amber-500/90 text-white text-xs rounded-full">
+                    <div
+                      className="absolute top-2 right-2 px-2 py-1 text-xs rounded-full text-white"
+                      style={{ backgroundColor: 'var(--color-warning)' }}
+                    >
                       生成中...
                     </div>
                   )}
                 </div>
 
-                {/* Hidden Audio Element */}
+                {/* Hidden Audio */}
                 {track.audioUrl && (
                   <audio
                     id={`audio-${track.id}`}
@@ -214,27 +285,36 @@ export default function LibraryPage() {
                 )}
 
                 {/* Track Info */}
-                <div className="p-3">
-                  <h3 className="font-medium truncate text-sm text-slate-900">
+                <div className="p-4">
+                  <h3
+                    className="font-medium truncate"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
                     {track.title || '未命名作品'}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                    {track.style && (
-                      <span className="truncate">{track.style}</span>
-                    )}
+                  <div
+                    className="flex items-center gap-2 text-xs mt-1"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {track.style && <span className="truncate">{track.style}</span>}
                     {track.style && <span>·</span>}
                     <span>{formatDate(track.createdAt)}</span>
                   </div>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         )}
 
+        {/* Back Link */}
         <div className="mt-8">
-          <a href="/" className="text-sm text-slate-500 hover:text-slate-700">
+          <Link
+            href="/"
+            className="text-sm transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+          >
             ← 返回首页
-          </a>
+          </Link>
         </div>
       </div>
     </main>
