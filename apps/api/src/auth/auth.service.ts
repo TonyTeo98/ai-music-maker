@@ -28,7 +28,7 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  async register(email: string, password: string, deviceInfo?: string) {
+  async register(email: string, password: string, deviceInfo?: string, deviceId?: string) {
     const normalizedEmail = this.normalizeEmail(email);
     this.assertPasswordValid(password);
 
@@ -67,10 +67,11 @@ export class AuthService {
     await this.emailService.sendVerificationEmail(normalizedEmail, verificationToken);
 
     const refreshToken = await this.jwtService.generateRefreshToken(user.id, deviceInfo);
+    await this.mergeAnonymousTracks(user.id, deviceId);
     return this.buildAuthResponse(user, refreshToken);
   }
 
-  async login(email: string, password: string, deviceInfo?: string) {
+  async login(email: string, password: string, deviceInfo?: string, deviceId?: string) {
     const normalizedEmail = this.normalizeEmail(email);
     const identity = await this.prisma.identity.findUnique({
       where: {
@@ -115,6 +116,7 @@ export class AuthService {
     }
 
     const refreshToken = await this.jwtService.generateRefreshToken(identity.userId, deviceInfo);
+    await this.mergeAnonymousTracks(identity.userId, deviceId);
     return this.buildAuthResponse(identity.user, refreshToken);
   }
 
@@ -170,7 +172,7 @@ export class AuthService {
     return { success: true };
   }
 
-  async loginWithGoogle(profile: GoogleProfile, deviceInfo?: string) {
+  async loginWithGoogle(profile: GoogleProfile, deviceInfo?: string, deviceId?: string) {
     const normalizedEmail = this.normalizeEmail(profile.email);
     const existingIdentity = await this.prisma.identity.findUnique({
       where: {
@@ -185,6 +187,7 @@ export class AuthService {
     if (existingIdentity) {
       const user = await this.ensureGoogleProfile(existingIdentity.user, profile);
       const refreshToken = await this.jwtService.generateRefreshToken(user.id, deviceInfo);
+      await this.mergeAnonymousTracks(user.id, deviceId);
       return this.buildAuthResponse(user, refreshToken);
     }
 
@@ -203,6 +206,7 @@ export class AuthService {
 
       const user = await this.ensureGoogleProfile(existingUser, profile);
       const refreshToken = await this.jwtService.generateRefreshToken(user.id, deviceInfo);
+      await this.mergeAnonymousTracks(user.id, deviceId);
       return this.buildAuthResponse(user, refreshToken);
     }
 
@@ -222,6 +226,7 @@ export class AuthService {
     });
 
     const refreshToken = await this.jwtService.generateRefreshToken(user.id, deviceInfo);
+    await this.mergeAnonymousTracks(user.id, deviceId);
     return this.buildAuthResponse(user, refreshToken);
   }
 
@@ -331,6 +336,23 @@ export class AuthService {
     ]);
 
     return { success: true };
+  }
+
+  private async mergeAnonymousTracks(userId: string, deviceId?: string): Promise<void> {
+    if (!deviceId) {
+      return;
+    }
+
+    try {
+      await this.prisma.$transaction([
+        this.prisma.track.updateMany({
+          where: { deviceId, userId: null },
+          data: { userId },
+        }),
+      ]);
+    } catch (error) {
+      console.error('[AuthService] Failed to merge anonymous tracks:', error);
+    }
   }
 
   private async ensureGoogleProfile(user: User, profile: GoogleProfile): Promise<User> {

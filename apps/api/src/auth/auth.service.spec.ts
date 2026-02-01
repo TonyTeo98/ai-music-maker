@@ -33,6 +33,9 @@ type MockedPrismaService = PrismaService & {
     updateMany: jest.Mock;
     create: jest.Mock;
   };
+  track: {
+    updateMany: jest.Mock;
+  };
   $transaction: jest.Mock;
 };
 
@@ -98,6 +101,9 @@ describe('AuthService', () => {
         findUnique: jest.fn(),
         updateMany: jest.fn(),
         create: jest.fn(),
+      },
+      track: {
+        updateMany: jest.fn(),
       },
       $transaction: jest.fn().mockResolvedValue([]),
     } as unknown as MockedPrismaService;
@@ -166,6 +172,24 @@ describe('AuthService', () => {
       });
     });
 
+    it('calls merge after successful register with deviceId', async () => {
+      const user = buildUser({ email: 'test@example.com' });
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue(user);
+      prisma.emailVerification.updateMany.mockResolvedValue({ count: 0 } as any);
+      prisma.emailVerification.create.mockResolvedValue({ id: 'verify-1' } as any);
+      jwtService.generateRefreshToken.mockResolvedValue('refresh-token');
+      jwtService.generateAccessToken.mockResolvedValue('access-token');
+      (jest.spyOn(bcrypt, 'hash') as jest.Mock).mockResolvedValue('hash');
+      const mergeSpy = jest
+        .spyOn(service as any, 'mergeAnonymousTracks')
+        .mockResolvedValue(undefined);
+
+      await service.register('Test@Example.com', 'Password1', 'device', 'device-id');
+
+      expect(mergeSpy).toHaveBeenCalledWith('user-1', 'device-id');
+    });
+
     it('throws ConflictException for duplicate email', async () => {
       prisma.user.findUnique.mockResolvedValue(buildUser());
 
@@ -223,6 +247,36 @@ describe('AuthService', () => {
         }),
       );
       expect(result.user.email).toBe('test@example.com');
+    });
+
+    it('calls merge after successful login with deviceId', async () => {
+      const identity = buildIdentity();
+      prisma.identity.findUnique.mockResolvedValue(identity);
+      prisma.identity.update.mockResolvedValue(identity);
+      jwtService.generateRefreshToken.mockResolvedValue('refresh-token');
+      jwtService.generateAccessToken.mockResolvedValue('access-token');
+      (jest.spyOn(bcrypt, 'compare') as jest.Mock).mockResolvedValue(true);
+      const mergeSpy = jest
+        .spyOn(service as any, 'mergeAnonymousTracks')
+        .mockResolvedValue(undefined);
+
+      await service.login('Test@Example.com', 'Password1', 'device', 'device-id');
+
+      expect(mergeSpy).toHaveBeenCalledWith('user-1', 'device-id');
+    });
+
+    it('skips merge when deviceId is not provided', async () => {
+      const identity = buildIdentity();
+      prisma.identity.findUnique.mockResolvedValue(identity);
+      prisma.identity.update.mockResolvedValue(identity);
+      jwtService.generateRefreshToken.mockResolvedValue('refresh-token');
+      jwtService.generateAccessToken.mockResolvedValue('access-token');
+      (jest.spyOn(bcrypt, 'compare') as jest.Mock).mockResolvedValue(true);
+
+      await service.login('Test@Example.com', 'Password1', 'device');
+
+      expect(prisma.track.updateMany).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('clears expired lockout before checking password', async () => {
@@ -563,6 +617,55 @@ describe('AuthService', () => {
     });
   });
 
+  describe('mergeAnonymousTracks', () => {
+    it('merges tracks with null userId for given deviceId', async () => {
+      prisma.track.updateMany.mockResolvedValue({ count: 2 } as any);
+
+      await (service as any).mergeAnonymousTracks('user-1', 'device-1');
+
+      expect(prisma.track.updateMany).toHaveBeenCalledWith({
+        where: { deviceId: 'device-1', userId: null },
+        data: { userId: 'user-1' },
+      });
+      expect(prisma.$transaction).toHaveBeenCalledWith([expect.any(Promise)]);
+    });
+
+    it('does not merge tracks with existing userId', async () => {
+      prisma.track.updateMany.mockResolvedValue({ count: 1 } as any);
+
+      await (service as any).mergeAnonymousTracks('user-1', 'device-1');
+
+      const callArgs = prisma.track.updateMany.mock.calls[0][0];
+      expect(callArgs.where).toEqual({ deviceId: 'device-1', userId: null });
+    });
+
+    it('handles no matching tracks gracefully', async () => {
+      prisma.track.updateMany.mockResolvedValue({ count: 0 } as any);
+
+      await expect(
+        (service as any).mergeAnonymousTracks('user-1', 'device-1'),
+      ).resolves.toBeUndefined();
+
+      expect(prisma.track.updateMany).toHaveBeenCalled();
+    });
+
+    it('logs error and continues on failure', async () => {
+      const error = new Error('merge failed');
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      prisma.track.updateMany.mockResolvedValue({ count: 0 } as any);
+      prisma.$transaction.mockRejectedValue(error);
+
+      await expect(
+        (service as any).mergeAnonymousTracks('user-1', 'device-1'),
+      ).resolves.toBeUndefined();
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[AuthService] Failed to merge anonymous tracks:',
+        error,
+      );
+    });
+  });
+
   describe('loginWithGoogle', () => {
     const profile = {
       providerId: 'google-123',
@@ -599,6 +702,31 @@ describe('AuthService', () => {
         },
       });
       expect(result.user.emailVerified).toBe(true);
+    });
+
+    it('calls merge after successful Google login with deviceId', async () => {
+      const user = buildUser({ emailVerified: false, nickname: null, avatar: null });
+      prisma.identity.findUnique.mockResolvedValue({
+        id: 'identity-google',
+        provider: IdentityProvider.google,
+        providerId: profile.providerId,
+        userId: user.id,
+        user,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      } as any);
+      prisma.user.update.mockResolvedValue(
+        buildUser({ emailVerified: true, nickname: profile.nickname, avatar: profile.avatar }),
+      );
+      jwtService.generateRefreshToken.mockResolvedValue('refresh-token');
+      jwtService.generateAccessToken.mockResolvedValue('access-token');
+      const mergeSpy = jest
+        .spyOn(service as any, 'mergeAnonymousTracks')
+        .mockResolvedValue(undefined);
+
+      await service.loginWithGoogle(profile, 'device-info', 'device-id');
+
+      expect(mergeSpy).toHaveBeenCalledWith('user-1', 'device-id');
     });
 
     it('links google identity to existing user without profile updates', async () => {
