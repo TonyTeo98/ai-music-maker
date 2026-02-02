@@ -30,16 +30,16 @@ export class AuthController {
   @Post('register')
   @ApiOperation({ summary: 'Register with email and password' })
   @ApiResponse({ status: 201, type: AuthResponseDto })
-  async register(@Body() dto: RegisterDto, @Req() req: Request): Promise<AuthResponseDto> {
-    return this.authService.register(dto.email, dto.password, this.getDeviceInfo(req));
+  async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
+    return this.authService.register(dto.email, dto.password, dto.deviceId);
   }
 
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({ status: 200, type: AuthResponseDto })
-  async login(@Body() dto: LoginDto, @Req() req: Request): Promise<AuthResponseDto> {
-    return this.authService.login(dto.email, dto.password, this.getDeviceInfo(req));
+  async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(dto.email, dto.password, dto.deviceId);
   }
 
   @Post('refresh')
@@ -85,7 +85,7 @@ export class AuthController {
   @ApiResponse({ status: 200, type: AuthResponseDto })
   async googleCallback(@Req() req: Request): Promise<AuthResponseDto> {
     const profile = req.user as GoogleProfile;
-    return this.authService.loginWithGoogle(profile, this.getDeviceInfo(req));
+    return this.authService.loginWithGoogle(profile, this.getDeviceIdFromHeader(req));
   }
 
   @Post('verify-email')
@@ -123,5 +123,16 @@ export class AuthController {
   private getDeviceInfo(req: Request): string | undefined {
     const userAgent = req.headers['user-agent'];
     return typeof userAgent === 'string' ? userAgent : undefined;
+  }
+
+  private getDeviceIdFromHeader(req: Request): string | undefined {
+    const deviceId = req.headers['x-device-id'];
+    if (typeof deviceId === 'string') {
+      return deviceId;
+    }
+    if (Array.isArray(deviceId)) {
+      return deviceId[0];
+    }
+    return undefined;
   }
 }
