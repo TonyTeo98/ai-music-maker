@@ -13,6 +13,7 @@ import { LangfuseModule } from './langfuse/langfuse.module';
 import { LyricsModule } from './lyrics/lyrics.module';
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { EmailModule } from './email/email.module';
     LyricsModule,
     AuthModule,
     EmailModule,
+    UsersModule,
   ],
   controllers: [HealthController],
   providers: [
