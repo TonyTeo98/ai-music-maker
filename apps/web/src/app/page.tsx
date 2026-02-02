@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { ThemeToggle } from '@/components/ThemeToggle'
 
 // Animated sound wave bars component
 function SoundWave({ className = '' }: { className?: string }) {
@@ -80,27 +79,6 @@ export default function Home() {
           }}
         />
       </div>
-
-      {/* Header with Theme Toggle */}
-      <header className="relative z-10 flex justify-between items-center p-4 md:p-6">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, var(--accent-primary) 0%, #9333EA 100%)',
-              boxShadow: 'var(--shadow-glow-primary)',
-            }}
-          >
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-            </svg>
-          </div>
-          <span className="font-semibold hidden sm:block" style={{ color: 'var(--text-primary)' }}>
-            AI Music Maker
-          </span>
-        </div>
-        <ThemeToggle />
-      </header>
 
       {/* Hero Section */}
       <section className="relative z-10 flex flex-col items-center justify-center px-6 pt-12 pb-20 md:pt-20 md:pb-32">

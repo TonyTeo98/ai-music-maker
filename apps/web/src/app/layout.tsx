@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
+import { Header } from '@/components/Header'
+import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import './globals.css'
 
@@ -63,7 +65,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen antialiased">
         <ThemeProvider>
-          {children}
+          <AuthProvider>
+            <Header />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
